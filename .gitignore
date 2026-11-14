@@ -1,0 +1,19 @@
+# Gradle / Android Studio
+.gradle/
+build/
+/local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signature (ne jamais publier la clé de signature)
+/keystore/
+/keystore.properties
+*.jks
+*.keystore
+
+# Captures Roborazzi temporaires
+app/build/outputs/roborazzi/
