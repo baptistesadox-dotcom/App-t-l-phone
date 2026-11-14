@@ -41,12 +41,19 @@ jobs:
       - name: Tests
         run: ./gradlew :app:testDebugUnitTest
 
-      - name: Compiler l'APK
-        run: ./gradlew :app:assembleRelease
+      - name: Compiler les APK (launcher + module de notifications)
+        run: ./gradlew :app:assembleRelease :notifications:assembleRelease
 
-      - name: Publier l'APK
+      - name: Publier l'APK du launcher
         uses: actions/upload-artifact@v5
         with:
           name: epure-apk
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Publier l'APK du module de notifications
+        uses: actions/upload-artifact@v5
+        with:
+          name: epure-notifications-apk
+          path: notifications/build/outputs/apk/release/*.apk
           if-no-files-found: error

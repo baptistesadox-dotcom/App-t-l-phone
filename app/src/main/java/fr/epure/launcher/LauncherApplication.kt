@@ -29,7 +29,7 @@ class AppContainer(context: Context) {
     val iconLoader = IconLoader(appContext, iconPacks, appsRepository)
     val weatherRepository = WeatherRepository(appContext)
     val calendarRepository = CalendarRepository(appContext)
-    val notificationHub = NotificationHub(appContext, appScope)
+    val notificationHub = NotificationHub(appContext)
 
     init {
         // Une app installée ou mise à jour peut changer d'icône : on vide le cache.

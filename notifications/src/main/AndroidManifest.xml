@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Échange réservé aux apps signées avec la même clé (le launcher Épure). -->
+    <permission
+        android:name="fr.epure.permission.NOTIFICATIONS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="fr.epure.permission.NOTIFICATIONS" />
+
+    <queries>
+        <package android:name="fr.epure.launcher" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true">
+
+        <!-- Écran d'aide : état de l'accès et marche à suivre. -->
+        <activity
+            android:name=".ModuleActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Lecteur de notifications (actif seulement si l'utilisateur l'autorise). -->
+        <service
+            android:name=".ModuleListenerService"
+            android:exported="true"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Demandes du launcher : envoyer la liste, effacer une notification. -->
+        <receiver
+            android:name=".ModuleReceiver"
+            android:exported="true"
+            android:permission="fr.epure.permission.NOTIFICATIONS">
+            <intent-filter>
+                <action android:name="fr.epure.action.NOTIFICATIONS_REQUEST" />
+                <action android:name="fr.epure.action.NOTIFICATIONS_DISMISS" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

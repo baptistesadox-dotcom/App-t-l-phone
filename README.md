@@ -37,8 +37,8 @@ launchers en liste les plus soignés).
 
 ## Installer sur le téléphone
 
-1. Télécharger le fichier `.apk` (envoyé directement, ou onglet **Actions** du dépôt ›
-   dernier build › *Artifacts* › `epure-apk`).
+1. Télécharger le fichier `.apk` du launcher (envoyé directement, ou onglet **Actions** du
+   dépôt › dernier build › *Artifacts* › `epure-apk`).
 2. L'ouvrir sur le téléphone. Android demande d'autoriser l'installation depuis cette source :
    accepter.
 3. Ouvrir **Épure**, puis appuyer sur **Définir par défaut** et choisir Épure comme
@@ -47,10 +47,23 @@ launchers en liste les plus soignés).
 Pour revenir à l'ancien launcher : Paramètres Android › Applications › Applications par défaut
 › Application d'écran d'accueil.
 
-**Notifications sous les apps** : Réglages d'Épure › Accueil et widgets › Notifications ›
-*Autoriser l'accès aux notifications*. Sur Android 13 et plus, une app installée hors Play
-Store est d'abord bloquée (« Paramètre restreint ») : ouvrir les infos de l'app Épure, toucher
-⋮ en haut à droite, *Autoriser les paramètres restreints*, puis recommencer.
+### Notifications sous les apps (facultatif)
+
+Elles passent par un petit module séparé, **Épure Notifications** (`Epure-Notifications.apk`).
+Pourquoi séparé : Google Play Protect bloque automatiquement l'installation, hors Play Store,
+des apps capables de lire les notifications (« Appli bloquée pour protéger votre appareil »).
+Le launcher ne lit donc rien lui-même et ses mises à jour s'installent normalement ; seul le
+module est concerné, et on ne l'installe qu'une fois.
+
+1. Play Store › photo de profil › **Play Protect** › ⚙ › désactiver *Analyser les applis
+   avec Play Protect*.
+2. Installer `Epure-Notifications.apk`, puis **réactiver aussitôt** l'analyse Play Protect.
+3. Ouvrir le module (ou Réglages d'Épure › Accueil et widgets › Notifications) ›
+   *Autoriser l'accès aux notifications*. Si Android affiche « Paramètre restreint » :
+   infos de l'app du module › ⋮ › *Autoriser les paramètres restreints*, puis recommencer.
+
+Le module transmet les notifications uniquement à Épure, sur le téléphone (échange réservé
+aux apps signées avec la même clé) : rien n'est enregistré ni envoyé ailleurs.
 
 ## Gestes
 
@@ -68,7 +81,9 @@ Store est d'abord bloquée (« Paramètre restreint ») : ouvrir les infos de l'
 ## Développement
 
 - Kotlin + Jetpack Compose, Android 8.0 (API 26) minimum.
-- Compiler : `./gradlew :app:assembleRelease` (APK dans `app/build/outputs/apk/release/`).
+- Compiler : `./gradlew assembleRelease` (APK dans `app/build/outputs/apk/release/` et
+  `notifications/build/outputs/apk/release/`). Les deux apps doivent être signées avec la
+  même clé.
 - Tests : `./gradlew :app:testDebugUnitTest`.
 - Régénérer les captures : `./gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`.
 - Signature : la clé n'est **jamais** versionnée. Créer `keystore.properties` à la racine :
@@ -89,11 +104,13 @@ app/src/main/java/fr/epure/launcher/
 ├── MainActivity.kt          écran d'accueil (activité HOME), widgets Android
 ├── SettingsActivity.kt      réglages (c'est aussi l'icône « Épure » de la liste)
 ├── data/                    apps installées, configuration (JSON), icônes, météo, agenda,
-│                            notifications (service d'écoute + regroupement par app)
+│                            notifications (reçues du module)
 ├── domain/                  logique pure : recherche, tri, catégories, codes météo
 ├── ui/                      interface Compose (accueil, liste, menus, réglages, thème)
 └── widgets/                 hôte des widgets Android
 app/src/main/res/values/strings.xml   tous les textes de l'app
+shared/        lecture des notifications et format d'échange (commun aux deux apps)
+notifications/ module « Épure Notifications » (lecteur de notifications, écran d'aide)
 ```
 
 ## Crédits

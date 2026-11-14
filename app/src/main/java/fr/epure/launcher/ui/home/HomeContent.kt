@@ -62,8 +62,8 @@ import fr.epure.launcher.R
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.TodoItem
-import fr.epure.launcher.data.notifications.AppUserKey
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AgendaState
 import fr.epure.launcher.ui.AppEntry
 import fr.epure.launcher.ui.AppMenuOrigin

@@ -11,8 +11,17 @@
     <!-- Bouton « Désinstaller » du menu d'une app -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
+    <!-- Échange avec le module « Épure Notifications », réservé aux apps signées avec la même clé.
+         Le launcher ne lit pas lui-même les notifications : Google Play Protect bloque
+         l'installation hors Play Store des apps qui le font. -->
+    <permission
+        android:name="fr.epure.permission.NOTIFICATIONS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="fr.epure.permission.NOTIFICATIONS" />
+
     <!-- Apps qu'Épure a besoin de voir (Android 11+) -->
     <queries>
+        <package android:name="fr.epure.notifications" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -74,17 +83,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <!-- Notifications sous le nom des apps (actif seulement si l'utilisateur l'autorise) -->
-        <service
-            android:name=".data.notifications.NotificationsService"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
 
         <!-- Réglages (icône « Épure » dans la liste des apps) -->
         <activity

@@ -17,6 +17,7 @@ import android.os.UserHandle
 import android.os.UserManager
 import android.provider.MediaStore
 import android.util.Log
+import fr.epure.shared.NotificationsContract
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -117,6 +118,8 @@ class AppsRepository(private val context: Context, private val scope: CoroutineS
             runCatching { launcherApps.getActivityList(null, user) }
                 .onFailure { Log.w(TAG, "Impossible de lister les apps du profil $serial", it) }
                 .getOrDefault(emptyList())
+                // Le module « Épure Notifications » fonctionne en coulisses : inutile de l'afficher.
+                .filter { it.componentName.packageName != NotificationsContract.MODULE_PACKAGE }
                 .map { info ->
                     InstalledApp(
                         key = AppKeys.of(info.componentName, serial, isMain),

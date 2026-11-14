@@ -41,8 +41,8 @@ import androidx.compose.ui.unit.dp
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.TodoItem
-import fr.epure.launcher.data.notifications.AppUserKey
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.common.BoundsHolder
 import fr.epure.launcher.ui.drawer.AlphabetScroller
 import fr.epure.launcher.ui.drawer.AppDrawer

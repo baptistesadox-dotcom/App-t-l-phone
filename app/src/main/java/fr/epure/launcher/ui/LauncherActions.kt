@@ -9,7 +9,7 @@ import fr.epure.launcher.data.apps.AppShortcut
 import fr.epure.launcher.data.calendar.AgendaEvent
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.widgets.WidgetProviderEntry
 
 /**

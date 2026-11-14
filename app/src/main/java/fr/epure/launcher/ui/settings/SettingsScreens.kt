@@ -98,6 +98,7 @@ import fr.epure.launcher.data.config.unhideApp
 import fr.epure.launcher.data.config.updateAppearance
 import fr.epure.launcher.data.config.updateWidgets
 import fr.epure.launcher.data.icons.IconPackInfo
+import fr.epure.launcher.data.notifications.NotificationModuleStatus
 import fr.epure.launcher.ui.FolderEditorRequest
 import fr.epure.launcher.ui.LauncherState
 import fr.epure.launcher.ui.NoOpActions
@@ -125,9 +126,9 @@ interface SettingsCallbacks {
     fun openWallpaperPicker()
     fun openUrl(url: String)
     fun showMessage(message: String)
-    fun hasNotificationAccess(): Boolean
+    fun notificationStatus(): NotificationModuleStatus
     fun openNotificationAccess()
-    fun openAppDetails()
+    fun openNotificationModuleDetails()
 }
 
 /** Racine des réglages avec une navigation simple entre pages. */
@@ -279,35 +280,41 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
         }
 
         SettingsSection(stringResource(R.string.section_notifications))
-        var access by remember { mutableStateOf(callbacks.hasNotificationAccess()) }
-        // Relu au retour des réglages Android, où l'utilisateur vient peut-être d'autoriser l'accès.
+        var status by remember { mutableStateOf(callbacks.notificationStatus()) }
+        // Relu au retour des réglages Android ou après l'installation du module.
         LifecycleResumeEffect(Unit) {
-            access = callbacks.hasNotificationAccess()
+            status = callbacks.notificationStatus()
             onPauseOrDispose { }
+        }
+        when (status) {
+            NotificationModuleStatus.NOT_INSTALLED -> {
+                SettingsNote(stringResource(R.string.notif_module_missing))
+                SettingsNote(stringResource(R.string.notif_module_install_steps))
+            }
+            NotificationModuleStatus.NO_ACCESS -> {
+                SettingsNote(stringResource(R.string.notif_module_no_access))
+                ButtonRow {
+                    OutlinedButton(onClick = callbacks::openNotificationAccess) { Text(stringResource(R.string.notif_grant)) }
+                }
+                SettingsNote(stringResource(R.string.notif_restricted_help))
+                ButtonRow {
+                    TextButton(onClick = callbacks::openNotificationModuleDetails) { Text(stringResource(R.string.notif_open_app_info)) }
+                }
+            }
+            NotificationModuleStatus.ACTIVE -> SettingsNote(stringResource(R.string.notif_module_active))
         }
         SettingsSwitch(
             title = stringResource(R.string.notif_show_home),
-            subtitle = stringResource(if (access) R.string.notif_access_on else R.string.notif_access_off),
             checked = config.notifications.showOnHome,
-            onChange = { v ->
-                vm.update { it.copy(notifications = it.notifications.copy(showOnHome = v)) }
-                if (v && !access) callbacks.openNotificationAccess()
-            },
+            enabled = status == NotificationModuleStatus.ACTIVE,
+            onChange = { v -> vm.update { it.copy(notifications = it.notifications.copy(showOnHome = v)) } },
         )
         SettingsSwitch(
             title = stringResource(R.string.notif_dots),
             checked = config.notifications.showDots,
+            enabled = status == NotificationModuleStatus.ACTIVE,
             onChange = { v -> vm.update { it.copy(notifications = it.notifications.copy(showDots = v)) } },
         )
-        if (!access) {
-            ButtonRow {
-                OutlinedButton(onClick = callbacks::openNotificationAccess) { Text(stringResource(R.string.notif_grant)) }
-            }
-            SettingsNote(stringResource(R.string.notif_restricted_help))
-            ButtonRow {
-                TextButton(onClick = callbacks::openAppDetails) { Text(stringResource(R.string.notif_open_app_info)) }
-            }
-        }
 
         SettingsSection(stringResource(R.string.section_gestures))
         SettingsSwitch(

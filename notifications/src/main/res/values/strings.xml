@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Épure Notifications</string>
+    <string name="listener_label">Épure (notifications sur l’accueil)</string>
+    <string name="module_title">Notifications pour Épure</string>
+    <string name="module_intro">Ce module affiche tes notifications sous le nom des apps, sur l’écran d’accueil Épure. Il les transmet uniquement à Épure, sur ce téléphone : rien n’est enregistré ni envoyé ailleurs.</string>
+    <string name="status_on">✓ Accès aux notifications autorisé. Tu peux fermer cet écran.</string>
+    <string name="status_off">Accès aux notifications : pas encore autorisé.</string>
+    <string name="button_grant">Autoriser l’accès aux notifications</string>
+    <string name="restricted_help">Si Android affiche « Paramètre restreint » : touche le bouton ci-dessous, puis ⋮ en haut à droite › « Autoriser les paramètres restreints », reviens ici et réessaie.</string>
+    <string name="button_app_info">Ouvrir les infos de l’app</string>
+</resources>

@@ -65,8 +65,8 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.epure.launcher.R
-import fr.epure.launcher.data.notifications.AppUserKey
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppMenuOrigin
 import fr.epure.launcher.ui.AppMenuRequest
 import fr.epure.launcher.ui.DrawerList

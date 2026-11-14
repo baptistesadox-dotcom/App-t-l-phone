@@ -1,6 +1,7 @@
 // Fichier de build racine : déclare les plugins utilisés par le module :app.
 plugins {
     alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
     // Fixe la version du compilateur Kotlin utilisée par le support Kotlin intégré d'AGP 9.
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false

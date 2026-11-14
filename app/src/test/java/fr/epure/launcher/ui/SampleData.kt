@@ -11,9 +11,9 @@ import fr.epure.launcher.data.config.addTodo
 import fr.epure.launcher.data.config.createFolder
 import fr.epure.launcher.data.config.toggleTodo
 import fr.epure.launcher.data.config.updateWidgets
-import fr.epure.launcher.data.notifications.AppUserKey
-import fr.epure.launcher.data.notifications.NotificationParser
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationParser
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.domain.DayForecast
 import fr.epure.launcher.domain.WeatherReport
 import java.time.LocalDateTime

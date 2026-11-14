@@ -38,7 +38,7 @@ import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.addHostedWidget
 import fr.epure.launcher.data.config.removeHostedWidget
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppEntry
 import fr.epure.launcher.ui.LauncherActions
 import fr.epure.launcher.ui.LauncherScreen

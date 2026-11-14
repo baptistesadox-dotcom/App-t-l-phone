@@ -44,4 +44,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Epure"
-include(":app")
+include(":app", ":shared", ":notifications")

@@ -1,4 +1,4 @@
-package fr.epure.launcher.data.notifications
+package fr.epure.shared
 
 import android.app.Notification
 import android.os.Process
@@ -88,5 +88,25 @@ class NotificationsTest {
         val grouped = NotificationParser.group(listOf(base, newer, summary, lonelySummary, other))
         assertEquals(listOf("b", "s2", "a"), grouped[AppUserKey("com.app", user)]!!.map { it.key })
         assertEquals(listOf("c"), grouped[AppUserKey("com.autre", user)]!!.map { it.key })
+    }
+
+    @Test
+    fun `echange entre le module et le launcher sans perte`() {
+        val preview = NotificationPreview(
+            key = "0|com.discord|42|null|10001",
+            packageName = "com.discord",
+            user = user,
+            postTime = 123_456L,
+            title = "Arkange • #médias",
+            text = "Altaïr : a envoyé une image",
+            contentIntent = null,
+            clearable = true,
+            autoCancel = true,
+            groupKey = "0|com.discord|g:messages",
+            isGroupSummary = false,
+        )
+        assertEquals(preview, NotificationsContract.fromBundle(NotificationsContract.toBundle(preview)))
+        // Un paquet incomplet est ignoré plutôt que de planter l'écran d'accueil.
+        assertNull(NotificationsContract.fromBundle(android.os.Bundle()))
     }
 }

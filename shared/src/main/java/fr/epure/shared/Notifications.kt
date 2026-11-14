@@ -1,4 +1,4 @@
-package fr.epure.launcher.data.notifications
+package fr.epure.shared
 
 import android.app.Notification
 import android.app.PendingIntent

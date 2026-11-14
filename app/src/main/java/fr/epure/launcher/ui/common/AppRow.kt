@@ -50,8 +50,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import fr.epure.launcher.data.notifications.NotificationFormat
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.NotificationFormat
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppEntry
 
 /** Garde la position d'un élément sans provoquer de recomposition (pour l'animation d'ouverture). */

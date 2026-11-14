@@ -2,27 +2,44 @@ package fr.epure.launcher.data.notifications
 
 import android.app.ActivityOptions
 import android.app.PendingIntent
-import android.content.ComponentName
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
-import android.service.notification.NotificationListenerService
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
+import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationParser
+import fr.epure.shared.NotificationPreview
+import fr.epure.shared.NotificationsContract
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+
+/** État du module « Épure Notifications ». */
+enum class NotificationModuleStatus {
+    /** Module pas installé : pas de notifications sur l'accueil. */
+    NOT_INSTALLED,
+
+    /** Module installé, mais l'accès aux notifications n'est pas encore autorisé. */
+    NO_ACCESS,
+
+    /** Tout fonctionne. */
+    ACTIVE,
+}
 
 /**
- * Notifications en cours, regroupées par app. Alimenté par [NotificationsService]
- * une fois que l'utilisateur a autorisé l'accès aux notifications.
+ * Notifications en cours, regroupées par app. Elles viennent du module séparé
+ * « Épure Notifications » (le launcher lui-même ne lit pas les notifications, pour
+ * que Google Play Protect laisse installer ses mises à jour).
  */
-class NotificationHub(private val context: Context, private val scope: CoroutineScope) {
+class NotificationHub(private val context: Context) {
 
     private val _byApp = MutableStateFlow<Map<AppUserKey, List<NotificationPreview>>>(emptyMap())
     val byApp: StateFlow<Map<AppUserKey, List<NotificationPreview>>> = _byApp.asStateFlow()
@@ -30,58 +47,61 @@ class NotificationHub(private val context: Context, private val scope: Coroutine
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
 
-    @Volatile
-    private var service: NotificationListenerService? = null
-    private val refreshRequests = Channel<Unit>(Channel.CONFLATED)
-
-    init {
-        scope.launch {
-            for (request in refreshRequests) {
-                load()
-                // Regroupe les rafales (une app qui met à jour plusieurs notifications d'un coup).
-                delay(150)
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != NotificationsContract.ACTION_SNAPSHOT) return
+            val connected = intent.getBooleanExtra(NotificationsContract.EXTRA_CONNECTED, false)
+            val bundles = IntentCompat.getParcelableArrayListExtra(
+                intent, NotificationsContract.EXTRA_NOTIFICATIONS, Bundle::class.java,
+            ).orEmpty()
+            _connected.value = connected
+            _byApp.value = if (connected) {
+                NotificationParser.group(bundles.mapNotNull(NotificationsContract::fromBundle))
+            } else {
+                emptyMap()
             }
         }
     }
 
-    /** Vrai si l'utilisateur a donné l'accès aux notifications à Épure. */
-    fun hasAccess(): Boolean =
-        NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
-
-    internal fun attach(service: NotificationListenerService) {
-        this.service = service
-        _connected.value = true
-        requestRefresh()
-    }
-
-    internal fun detach(service: NotificationListenerService) {
-        if (this.service !== service) return
-        this.service = null
-        _connected.value = false
-        _byApp.value = emptyMap()
-    }
-
-    fun requestRefresh() {
-        refreshRequests.trySend(Unit)
-    }
-
-    private fun load() {
-        val current = service ?: return
-        val active = try {
-            current.activeNotifications
-        } catch (e: Exception) {
-            Log.w(TAG, "Notifications illisibles", e)
-            null
-        } ?: return
-        _byApp.value = NotificationParser.group(
-            active.filter { it.packageName != context.packageName }.mapNotNull { NotificationParser.parse(it) },
+    init {
+        // Seul un expéditeur signé avec la même clé (le module) peut envoyer ces données.
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(NotificationsContract.ACTION_SNAPSHOT),
+            NotificationsContract.PERMISSION,
+            null,
+            ContextCompat.RECEIVER_EXPORTED,
         )
+        requestSnapshot()
     }
 
-    /** Si l'accès est accordé mais que le service a été arrêté par le système, on le relance. */
-    fun ensureBound() {
-        if (_connected.value || !hasAccess()) return
-        runCatching { NotificationListenerService.requestRebind(ComponentName(context, NotificationsService::class.java)) }
+    fun isModuleInstalled(): Boolean = runCatching {
+        context.packageManager.getPackageInfo(NotificationsContract.MODULE_PACKAGE, 0)
+        true
+    }.getOrDefault(false)
+
+    fun status(): NotificationModuleStatus = when {
+        !isModuleInstalled() -> NotificationModuleStatus.NOT_INSTALLED
+        !NotificationManagerCompat.getEnabledListenerPackages(context).contains(NotificationsContract.MODULE_PACKAGE) ->
+            NotificationModuleStatus.NO_ACCESS
+        else -> NotificationModuleStatus.ACTIVE
+    }
+
+    /** Demande la liste actuelle au module (au démarrage, au retour sur l'accueil…). */
+    fun requestSnapshot() {
+        if (!isModuleInstalled()) {
+            _connected.value = false
+            _byApp.value = emptyMap()
+            return
+        }
+        send(Intent(NotificationsContract.ACTION_REQUEST))
+    }
+
+    private fun send(intent: Intent) {
+        intent.setPackage(NotificationsContract.MODULE_PACKAGE).addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+        runCatching { context.sendBroadcast(intent, NotificationsContract.PERMISSION) }
+            .onFailure { Log.w(TAG, "Module de notifications injoignable", it) }
     }
 
     /** Ouvre la notification comme depuis le volet. Renvoie false si elle n'est plus valable. */
@@ -106,20 +126,27 @@ class NotificationHub(private val context: Context, private val scope: Coroutine
 
     fun dismiss(preview: NotificationPreview) {
         if (!preview.clearable) return
-        runCatching { service?.cancelNotification(preview.key) }
-        requestRefresh()
+        // Retrait immédiat à l'écran ; le module confirmera avec la nouvelle liste.
+        _byApp.value = _byApp.value
+            .mapValues { (_, list) -> list.filterNot { it.key == preview.key } }
+            .filterValues { it.isNotEmpty() }
+        send(Intent(NotificationsContract.ACTION_DISMISS).putExtra(NotificationsContract.EXTRA_KEY, preview.key))
     }
 
-    /** Écran des réglages Android où l'on autorise l'accès aux notifications. */
-    fun accessSettingsIntent(): Intent {
-        val component = ComponentName(context, NotificationsService::class.java)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
-                .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+    /** Réglage Android où l'on autorise le module à lire les notifications. */
+    fun accessSettingsIntent(): Intent =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(
+                Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                NotificationsContract.listenerComponent.flattenToString(),
+            )
         } else {
             Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         }
-    }
+
+    /** Infos de l'app du module (pour « Autoriser les paramètres restreints »). */
+    fun moduleDetailsIntent(): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", NotificationsContract.MODULE_PACKAGE, null))
 
     private companion object {
         const val TAG = "Notifications"

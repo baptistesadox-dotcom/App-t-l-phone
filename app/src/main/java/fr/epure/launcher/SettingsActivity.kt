@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import fr.epure.launcher.data.config.LauncherConfig
+import fr.epure.launcher.data.notifications.NotificationModuleStatus
 import fr.epure.launcher.ui.common.LocalIconProvider
 import fr.epure.launcher.ui.common.LoaderIconProvider
 import fr.epure.launcher.ui.settings.SettingsApp
@@ -200,7 +201,7 @@ class SettingsActivity : ComponentActivity() {
             Toast.makeText(this@SettingsActivity, message, Toast.LENGTH_LONG).show()
         }
 
-        override fun hasNotificationAccess(): Boolean = appContainer.notificationHub.hasAccess()
+        override fun notificationStatus(): NotificationModuleStatus = appContainer.notificationHub.status()
 
         override fun openNotificationAccess() {
             val hub = appContainer.notificationHub
@@ -213,7 +214,9 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        override fun openAppDetails() = SystemActions.openAppSettings(this@SettingsActivity)
+        override fun openNotificationModuleDetails() {
+            SystemActions.start(this@SettingsActivity, appContainer.notificationHub.moduleDetailsIntent(), getString(R.string.error_no_app))
+        }
     }
 
     companion object {

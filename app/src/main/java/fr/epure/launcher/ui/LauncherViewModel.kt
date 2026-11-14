@@ -13,8 +13,8 @@ import fr.epure.launcher.data.config.clearDoneTodos
 import fr.epure.launcher.data.config.editTodo
 import fr.epure.launcher.data.config.removeTodo
 import fr.epure.launcher.data.config.toggleTodo
-import fr.epure.launcher.data.notifications.AppUserKey
-import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.shared.AppUserKey
+import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.data.weather.WeatherRepository
 import fr.epure.launcher.domain.WeatherReport
 import kotlinx.coroutines.Dispatchers
@@ -196,7 +196,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Appelé quand l'accueil redevient visible. */
     fun onHomeVisible() {
         appsRepository.refreshIfLocaleChanged()
-        container.notificationHub.ensureBound()
+        container.notificationHub.requestSnapshot()
         refreshWeather(force = false)
         refreshAgenda()
     }
