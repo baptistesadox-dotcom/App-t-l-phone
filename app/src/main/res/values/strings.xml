@@ -85,6 +85,7 @@
 
     <!-- Widgets intégrés -->
     <string name="weather_choose_city">Météo : choisis ta ville</string>
+    <string name="weather_choose_city_short">météo ?</string>
     <string name="weather_loading">Météo de %1$s…</string>
     <string name="weather_unavailable">Météo de %1$s indisponible</string>
     <string name="weather_today">Auj.</string>
@@ -118,7 +119,7 @@
     <string name="default_launcher_text">Épure s’ouvrira quand tu appuies sur le bouton Accueil. Tu pourras revenir à ton ancien écran d’accueil à tout moment.</string>
     <string name="default_launcher_button">Définir par défaut</string>
     <string name="settings_widgets">Accueil et widgets</string>
-    <string name="settings_widgets_sub">Horloge, météo, agenda, tâches, widgets Android</string>
+    <string name="settings_widgets_sub">Horloge, météo, agenda, tâches, notifications, widgets Android</string>
     <string name="settings_favorites">Favoris de l’accueil</string>
     <string name="settings_favorites_sub">Choisir et ordonner les apps de l’accueil</string>
     <string name="settings_appearance">Apparence</string>
@@ -156,6 +157,14 @@
     <string name="widget_todo">Afficher la liste de tâches</string>
     <string name="section_android_widgets">Widgets Android</string>
     <string name="android_widgets_none">Ajoute les widgets de tes apps (Météo, Agenda Google, Keep…). Astuce : appui long sur une zone vide de l’accueil.</string>
+    <string name="section_notifications">Notifications</string>
+    <string name="notif_show_home">Afficher les notifications sous les apps</string>
+    <string name="notif_access_on">Accès aux notifications autorisé</string>
+    <string name="notif_access_off">Nécessite l’accès aux notifications</string>
+    <string name="notif_dots">Pastille dans la liste des apps</string>
+    <string name="notif_grant">Autoriser l’accès aux notifications</string>
+    <string name="notif_restricted_help">Si Android affiche « Paramètre restreint » (app installée hors Play Store) : ouvre les infos de l’app Épure, touche ⋮ en haut à droite, puis « Autoriser les paramètres restreints », et réessaie. Épure lit les notifications uniquement pour les afficher : rien n’est enregistré ni envoyé.</string>
+    <string name="notif_open_app_info">Ouvrir les infos de l’app</string>
     <string name="section_gestures">Gestes</string>
     <string name="gesture_swipe_down">Glisser vers le bas pour les notifications</string>
     <string name="gesture_note">Glisser vers le haut sur l’accueil ouvre toujours la liste des apps.</string>
@@ -231,4 +240,5 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_text">Un écran d’accueil minimaliste et personnel : sans publicité, sans abonnement, sans collecte de données.</string>
     <string name="about_weather_credit">Données météo : Open-Meteo</string>
+    <string name="about_fonts">Licences des polices</string>
 </resources>

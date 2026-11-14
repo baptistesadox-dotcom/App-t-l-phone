@@ -7,6 +7,7 @@ import fr.epure.launcher.data.calendar.CalendarRepository
 import fr.epure.launcher.data.config.ConfigRepository
 import fr.epure.launcher.data.icons.IconLoader
 import fr.epure.launcher.data.icons.IconPackManager
+import fr.epure.launcher.data.notifications.NotificationHub
 import fr.epure.launcher.data.weather.WeatherRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ class AppContainer(context: Context) {
     val iconLoader = IconLoader(appContext, iconPacks, appsRepository)
     val weatherRepository = WeatherRepository(appContext)
     val calendarRepository = CalendarRepository(appContext)
+    val notificationHub = NotificationHub(appContext, appScope)
 
     init {
         // Une app installée ou mise à jour peut changer d'icône : on vide le cache.

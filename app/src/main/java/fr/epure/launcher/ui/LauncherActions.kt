@@ -9,6 +9,7 @@ import fr.epure.launcher.data.apps.AppShortcut
 import fr.epure.launcher.data.calendar.AgendaEvent
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
+import fr.epure.launcher.data.notifications.NotificationPreview
 import fr.epure.launcher.widgets.WidgetProviderEntry
 
 /**
@@ -43,6 +44,9 @@ interface LauncherActions {
     fun addWidget(provider: WidgetProviderEntry)
     fun removeWidget(widget: HostedWidget)
     fun showMessage(message: String)
+    fun openNotification(preview: NotificationPreview)
+    fun dismissNotification(preview: NotificationPreview)
+
 }
 
 open class NoOpActions : LauncherActions {
@@ -73,6 +77,8 @@ open class NoOpActions : LauncherActions {
     override fun addWidget(provider: WidgetProviderEntry) = Unit
     override fun removeWidget(widget: HostedWidget) = Unit
     override fun showMessage(message: String) = Unit
+    override fun openNotification(preview: NotificationPreview) = Unit
+    override fun dismissNotification(preview: NotificationPreview) = Unit
 }
 
 /** D'où vient l'appui long sur une app (pour proposer les bonnes actions). */
@@ -105,8 +111,14 @@ class LauncherUiController(drawerInitiallyOpen: Boolean = false) {
     var widgetPickerOpen by mutableStateOf(false)
     var widgetMenu by mutableStateOf<HostedWidget?>(null)
 
+    /** App dont toutes les notifications sont dépliées sur l'accueil (clé d'app). */
+    var expandedNotifications by mutableStateOf<String?>(null)
+
     /** Lettre actuellement touchée sur l'alphabet (null si aucune). */
     var scrollerLetter by mutableStateOf<String?>(null)
+
+    /** Hauteur du doigt sur l'alphabet (pixels, repère de la fenêtre). */
+    var scrollerY by mutableStateOf(0f)
 
     /** Incrémenté à chaque appui sur « Accueil », pour remonter en haut des listes. */
     var homeResetCount by mutableStateOf(0)
@@ -131,6 +143,7 @@ class LauncherUiController(drawerInitiallyOpen: Boolean = false) {
         closeOverlays()
         drawerOpen = false
         expandedFolderId = null
+        expandedNotifications = null
         scrollerLetter = null
         homeResetCount++
     }

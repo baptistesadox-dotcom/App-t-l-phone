@@ -1,6 +1,10 @@
 package fr.epure.launcher.ui.widgets
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -24,7 +28,6 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Dehaze
-import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.FilterDrama
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.Grain
@@ -53,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -64,7 +68,7 @@ import fr.epure.launcher.R
 import fr.epure.launcher.data.calendar.AgendaEvent
 import fr.epure.launcher.data.calendar.AgendaFormat
 import fr.epure.launcher.data.config.TodoItem
-import fr.epure.launcher.data.config.WeatherLocation
+import fr.epure.launcher.data.config.WidgetsConfig
 import fr.epure.launcher.domain.WeatherCodes
 import fr.epure.launcher.domain.WeatherKind
 import fr.epure.launcher.ui.AgendaState
@@ -99,46 +103,6 @@ fun rememberNow(fixedNow: Long? = null): Long {
 
 private val French = Locale.FRANCE
 
-@Composable
-fun ClockWidget(
-    now: Long,
-    use24Hour: Boolean,
-    showClock: Boolean,
-    showDate: Boolean,
-    onClockClick: () -> Unit,
-    onDateClick: () -> Unit,
-) {
-    val look = LocalLauncherLook.current
-    val zoned = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
-    Column {
-        if (showClock) {
-            val time = DateTimeFormatter.ofPattern(if (use24Hour) "HH:mm" else "h:mm", French).format(zoned)
-            Text(
-                text = time,
-                style = with(look) {
-                    MaterialTheme.typography.displayLarge.copy(
-                        fontSize = 68.sp,
-                        fontWeight = FontWeight.Light,
-                        letterSpacing = (-1).sp,
-                    ).onWallpaper()
-                },
-                modifier = Modifier.clickable(onClick = onClockClick),
-            )
-        }
-        if (showDate) {
-            val date = DateTimeFormatter.ofPattern("EEEE d MMMM", French).format(zoned)
-                .replaceFirstChar { it.titlecase(French) }
-            Text(
-                text = date,
-                style = with(look) { MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp).onWallpaper(muted = true) },
-                modifier = Modifier
-                    .clickable(onClick = onDateClick)
-                    .padding(vertical = 2.dp),
-            )
-        }
-    }
-}
-
 private fun WeatherKind.icon(isDay: Boolean): ImageVector = when (this) {
     WeatherKind.CLEAR -> if (isDay) Icons.Outlined.WbSunny else Icons.Outlined.NightsStay
     WeatherKind.PARTLY_CLOUDY -> Icons.Outlined.FilterDrama
@@ -153,159 +117,187 @@ private fun WeatherKind.icon(isDay: Boolean): ImageVector = when (this) {
 
 private fun formatTemp(value: Double): String = "${value.roundToInt()}°"
 
+/** Clic sans halo gris (le texte posé sur le fond d'écran reste sobre). */
+private fun Modifier.quietClick(onClick: () -> Unit): Modifier =
+    clickable(interactionSource = null, indication = null, onClick = onClick)
+
+/**
+ * Bloc « coup d'œil » posé juste au-dessus des favoris : grande heure, date courte
+ * avec la météo sur la même ligne, puis les prochains rendez-vous.
+ */
 @Composable
-fun WeatherWidget(
-    state: WeatherState,
-    location: WeatherLocation?,
-    onRefresh: () -> Unit,
-    onConfigure: () -> Unit,
+fun GlanceBlock(
+    now: Long,
+    use24Hour: Boolean,
+    widgets: WidgetsConfig,
+    weather: WeatherState,
+    agenda: AgendaState,
+    onClockClick: () -> Unit,
+    onDateClick: () -> Unit,
+    onWeatherRefresh: () -> Unit,
+    onConfigureWeather: () -> Unit,
+    onRequestCalendarPermission: () -> Unit,
+    onEventClick: (AgendaEvent) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val look = LocalLauncherLook.current
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val report = state.report
-    val text = MaterialTheme.typography
-    if (location == null) {
-        Text(
-            text = stringResource(R.string.weather_choose_city),
-            style = with(look) { text.titleMedium.onWallpaper(muted = true) },
-            modifier = Modifier
-                .clickable(onClick = onConfigure)
-                .padding(vertical = 6.dp),
-        )
-        return
+    val type = MaterialTheme.typography
+    val zoned = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+    var forecastOpen by rememberSaveable { mutableStateOf(false) }
+    val secondary = with(look) {
+        type.titleMedium.copy(fontSize = 16.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper(muted = true)
     }
-    Column(
-        modifier = Modifier.clickable {
-            expanded = !expanded
-            onRefresh()
-        },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-            if (report != null) {
-                Icon(
-                    imageVector = WeatherCodes.kindOf(report.code).icon(report.isDay),
-                    contentDescription = null,
-                    tint = look.onWallpaper,
-                    modifier = Modifier.size(26.dp),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = formatTemp(report.temperature),
-                    style = with(look) { text.headlineSmall.copy(fontWeight = FontWeight.Medium).onWallpaper() },
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = "${location.name} · ${WeatherCodes.labelOf(report.code, report.isDay)}",
-                    style = with(look) { text.titleMedium.onWallpaper(muted = true) },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                Text(
-                    text = if (state.failed) stringResource(R.string.weather_unavailable, location.name)
-                    else stringResource(R.string.weather_loading, location.name),
-                    style = with(look) { text.titleMedium.onWallpaper(muted = true) },
-                )
+
+    Column(modifier) {
+        if (widgets.showClock) {
+            Text(
+                text = DateTimeFormatter.ofPattern(if (use24Hour) "HH:mm" else "h:mm", French).format(zoned),
+                style = with(look) {
+                    type.displayMedium.copy(
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.5).sp,
+                    ).onWallpaper()
+                },
+                modifier = Modifier.quietClick(onClockClick),
+            )
+        }
+        val showWeather = widgets.showWeather
+        if (widgets.showDate || showWeather) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 2.dp)) {
+                if (widgets.showDate) {
+                    Text(
+                        text = DateTimeFormatter.ofPattern("EEE d MMM", French).format(zoned),
+                        style = secondary,
+                        modifier = Modifier.quietClick(onDateClick),
+                    )
+                }
+                if (showWeather) {
+                    if (widgets.showDate) Text("  ·  ", style = secondary)
+                    WeatherInline(
+                        state = weather,
+                        hasLocation = widgets.weatherLocation != null,
+                        style = secondary,
+                        onClick = {
+                            if (widgets.weatherLocation == null) onConfigureWeather()
+                            else {
+                                forecastOpen = !forecastOpen
+                                onWeatherRefresh()
+                            }
+                        },
+                    )
+                }
             }
         }
-        AnimatedVisibility(visible = expanded && report != null && report.days.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
-                report?.days?.take(4)?.forEachIndexed { index, day ->
-                    val dayName = when (index) {
-                        0 -> stringResource(R.string.weather_today)
-                        else -> runCatching {
+        val report = weather.report
+        AnimatedVisibility(
+            visible = forecastOpen && report != null && report.days.isNotEmpty(),
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            Column(Modifier.padding(start = 2.dp, top = 8.dp)) {
+                widgets.weatherLocation?.let { Text(it.name, style = secondary) }
+                Row(horizontalArrangement = Arrangement.spacedBy(22.dp), modifier = Modifier.padding(top = 6.dp)) {
+                    report?.days?.take(4)?.forEachIndexed { index, day ->
+                        val dayName = if (index == 0) stringResource(R.string.weather_today) else runCatching {
                             DateTimeFormatter.ofPattern("EEE", French).format(LocalDate.parse(day.date))
-                                .replaceFirstChar { it.titlecase(French) }
                         }.getOrDefault(day.date)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(dayName, style = with(look) { text.labelLarge.onWallpaper(muted = true) })
-                        Icon(
-                            imageVector = WeatherCodes.kindOf(day.code).icon(true),
-                            contentDescription = WeatherCodes.labelOf(day.code),
-                            tint = look.onWallpaper,
-                            modifier = Modifier
-                                .padding(vertical = 4.dp)
-                                .size(20.dp),
-                        )
-                        Text(
-                            text = "${formatTemp(day.max)} ${formatTemp(day.min)}",
-                            style = with(look) { text.labelLarge.onWallpaper() },
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(dayName, style = secondary.copy(fontSize = 13.sp))
+                            Icon(
+                                imageVector = WeatherCodes.kindOf(day.code).icon(true),
+                                contentDescription = WeatherCodes.labelOf(day.code),
+                                tint = look.onWallpaper,
+                                modifier = Modifier
+                                    .padding(vertical = 4.dp)
+                                    .size(18.dp),
+                            )
+                            Text("${formatTemp(day.max)} ${formatTemp(day.min)}", style = secondary.copy(fontSize = 13.sp))
+                        }
                     }
                 }
+            }
+        }
+        if (widgets.showAgenda) {
+            Spacer(Modifier.height(8.dp))
+            AgendaLines(
+                state = agenda,
+                now = now,
+                use24Hour = use24Hour,
+                style = secondary.copy(fontSize = 15.sp * look.textScale),
+                onRequestPermission = onRequestCalendarPermission,
+                onEventClick = onEventClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeatherInline(state: WeatherState, hasLocation: Boolean, style: TextStyle, onClick: () -> Unit) {
+    val look = LocalLauncherLook.current
+    val report = state.report
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.quietClick(onClick)) {
+        when {
+            !hasLocation -> Text(stringResource(R.string.weather_choose_city_short), style = style)
+            report == null -> Text(if (state.failed) "—" else "…", style = style)
+            else -> {
+                Icon(
+                    imageVector = WeatherCodes.kindOf(report.code).icon(report.isDay),
+                    contentDescription = WeatherCodes.labelOf(report.code, report.isDay),
+                    tint = look.onWallpaperMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(formatTemp(report.temperature), style = style)
             }
         }
     }
 }
 
 @Composable
-fun AgendaWidget(
+private fun AgendaLines(
     state: AgendaState,
     now: Long,
     use24Hour: Boolean,
+    style: TextStyle,
     onRequestPermission: () -> Unit,
     onEventClick: (AgendaEvent) -> Unit,
-    onOpenCalendar: () -> Unit,
 ) {
-    val look = LocalLauncherLook.current
-    val text = MaterialTheme.typography
     if (!state.hasPermission) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clickable(onClick = onRequestPermission)
-                .padding(vertical = 6.dp),
-        ) {
-            Icon(Icons.Outlined.Event, contentDescription = null, tint = look.onWallpaperMuted, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(stringResource(R.string.agenda_allow), style = with(look) { text.titleMedium.onWallpaper(muted = true) })
-        }
-        return
-    }
-    if (state.events.isEmpty()) {
         Text(
-            text = stringResource(R.string.agenda_empty),
-            style = with(look) { text.titleMedium.onWallpaper(muted = true) },
+            text = stringResource(R.string.agenda_allow),
+            style = style,
             modifier = Modifier
-                .clickable(onClick = onOpenCalendar)
-                .padding(vertical = 6.dp),
+                .quietClick(onRequestPermission)
+                .padding(start = 2.dp, top = 2.dp),
         )
         return
     }
-    Column {
-        state.events.forEach { event ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onEventClick(event) }
-                    .padding(vertical = 5.dp),
-            ) {
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .background(event.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary, CircleShape),
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = event.title.ifEmpty { stringResource(R.string.agenda_untitled) },
-                        style = with(look) { text.titleMedium.onWallpaper() },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = AgendaFormat.whenLabel(event, now, use24Hour),
-                        style = with(look) { text.bodyMedium.onWallpaper(muted = true) },
-                        maxLines = 1,
-                    )
-                }
-            }
+    state.events.take(3).forEach { event ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .quietClick { onEventClick(event) }
+                .padding(start = 2.dp, top = 3.dp, bottom = 3.dp),
+        ) {
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .background(event.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary, CircleShape),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = AgendaFormat.whenLabel(event, now, use24Hour) + "  " +
+                    event.title.ifEmpty { stringResource(R.string.agenda_untitled) },
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
+/** Liste de tâches, en haut de l'accueil. */
 @Composable
 fun TodoWidget(
     todos: List<TodoItem>,
@@ -317,25 +309,27 @@ fun TodoWidget(
     startAdding: Boolean = false,
 ) {
     val look = LocalLauncherLook.current
-    val text = MaterialTheme.typography
+    val type = MaterialTheme.typography
     val haptics = LocalHapticFeedback.current
     var adding by rememberSaveable { mutableStateOf(startAdding) }
     var draft by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    val itemStyle = with(look) { type.titleMedium.copy(fontSize = 16.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper() }
+    val mutedStyle = with(look) { type.titleMedium.copy(fontSize = 16.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper(muted = true) }
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
             Text(
                 text = stringResource(R.string.todo_title),
-                style = with(look) { text.labelLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp).onWallpaper(muted = true) },
+                style = with(look) { type.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp).onWallpaper(muted = true) },
                 modifier = Modifier.weight(1f),
             )
             if (todos.any { it.done }) {
                 Text(
                     text = stringResource(R.string.todo_clear_done),
-                    style = with(look) { text.labelLarge.onWallpaper(muted = true) },
+                    style = with(look) { type.labelLarge.onWallpaper(muted = true) },
                     modifier = Modifier
-                        .clickable(onClick = onClearDone)
+                        .quietClick(onClearDone)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
@@ -346,6 +340,8 @@ fun TodoWidget(
                 modifier = Modifier
                     .fillMaxWidth()
                     .combinedClickable(
+                        interactionSource = null,
+                        indication = null,
                         onClick = { onToggle(item.id) },
                         onLongClick = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -358,16 +354,14 @@ fun TodoWidget(
                     imageVector = if (item.done) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                     contentDescription = null,
                     tint = if (item.done) look.onWallpaperMuted else look.onWallpaper,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = item.text,
-                    style = with(look) {
-                        text.titleMedium.copy(
-                            textDecoration = if (item.done) TextDecoration.LineThrough else TextDecoration.None,
-                        ).onWallpaper(muted = item.done)
-                    },
+                    style = (if (item.done) mutedStyle else itemStyle).copy(
+                        textDecoration = if (item.done) TextDecoration.LineThrough else TextDecoration.None,
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -375,17 +369,15 @@ fun TodoWidget(
         }
         if (adding) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                Icon(Icons.Outlined.RadioButtonUnchecked, contentDescription = null, tint = look.onWallpaperMuted, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.RadioButtonUnchecked, contentDescription = null, tint = look.onWallpaperMuted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(12.dp))
                 Box(Modifier.weight(1f)) {
-                    if (draft.isEmpty()) {
-                        Text(stringResource(R.string.todo_new_hint), style = with(look) { text.titleMedium.onWallpaper(muted = true) })
-                    }
+                    if (draft.isEmpty()) Text(stringResource(R.string.todo_new_hint), style = mutedStyle)
                     BasicTextField(
                         value = draft,
                         onValueChange = { draft = it },
                         singleLine = true,
-                        textStyle = with(look) { text.titleMedium.onWallpaper() },
+                        textStyle = itemStyle,
                         cursorBrush = SolidColor(look.onWallpaper),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
@@ -404,17 +396,13 @@ fun TodoWidget(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clickable { adding = true }
+                    .quietClick { adding = true }
                     .padding(vertical = 5.dp),
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, tint = look.onWallpaperMuted, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.Add, contentDescription = null, tint = look.onWallpaperMuted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.todo_add), style = with(look) { text.titleMedium.onWallpaper(muted = true) })
+                Text(stringResource(R.string.todo_add), style = mutedStyle)
             }
         }
     }
 }
-
-/** Espace vertical régulier entre les widgets de l'accueil. */
-@Composable
-fun WidgetSpacer() = Spacer(Modifier.height(18.dp))

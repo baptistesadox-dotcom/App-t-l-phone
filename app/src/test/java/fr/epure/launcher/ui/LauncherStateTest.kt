@@ -18,24 +18,24 @@ class LauncherStateTest {
     @Test
     fun `etat de l accueil avec dossiers, noms et apps masquees`() {
         val config = SampleData.config
-            .renameApp(SampleData.key("Chrome"), "Internet")
+            .renameApp(SampleData.key("Photos"), "Galerie")
             .hideApp(SampleData.key("Snapchat"))
         val state = buildLauncherState(config, apps, Locale.FRANCE)
 
         // L'app masquée disparaît de la liste et de son dossier.
         assertFalse(state.apps.any { it.label == "Snapchat" })
         assertTrue(state.allApps.any { it.label == "Snapchat" && it.isHidden })
-        assertEquals(listOf("Discord", "Instagram", "Signal", "WhatsApp"), state.folderById("social")!!.apps.map { it.label })
+        assertEquals(listOf("LinkedIn", "Signal", "YouTube"), state.folderById("social")!!.apps.map { it.label })
 
         // Le nom personnalisé est utilisé partout, y compris pour la lettre de section.
-        val internet = state.apps.first { it.key == SampleData.key("Chrome") }
-        assertEquals("Internet", internet.label)
-        assertEquals("I", internet.section)
-        assertTrue(internet.isRenamed)
+        val galerie = state.apps.first { it.key == SampleData.key("Photos") }
+        assertEquals("Galerie", galerie.label)
+        assertEquals("G", galerie.section)
+        assertTrue(galerie.isRenamed)
 
         // Accueil : dans l'ordre de la configuration.
         assertEquals(
-            listOf("app:Téléphone", "app:Messages", "folder:Réseaux", "app:Spotify", "app:Appareil photo", "app:Internet"),
+            listOf("app:WhatsApp", "app:Instagram", "app:Discord", "app:Messages", "folder:Réseaux", "app:Appareil photo", "app:Galerie"),
             state.home.map {
                 when (it) {
                     is HomeEntry.App -> "app:${it.entry.label}"

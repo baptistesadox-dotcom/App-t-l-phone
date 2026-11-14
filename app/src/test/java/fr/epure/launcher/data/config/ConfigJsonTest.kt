@@ -31,6 +31,14 @@ class ConfigJsonTest {
     }
 
     @Test
+    fun `une configuration de la version 0_1 est mise a jour a la lecture`() {
+        val v1 = ConfigJson.encode(LauncherConfig(schemaVersion = 1).updateAppearance { it.copy(font = FontChoice.SYSTEM) })
+        val read = ConfigJson.decode(v1)
+        assertEquals(CURRENT_SCHEMA_VERSION, read.schemaVersion)
+        assertEquals(FontChoice.NUNITO, read.appearance.font)
+    }
+
+    @Test
     fun `une ancienne sauvegarde incomplete reste lisible`() {
         val old = """{"home":[{"type":"app","key":"k"}],"champInconnu":42,"appearance":{"themeMode":"MODE_FUTUR"}}"""
         val config = ConfigJson.decode(old)

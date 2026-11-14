@@ -4,15 +4,25 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import fr.epure.launcher.R
 import fr.epure.launcher.data.config.FontChoice
 import java.io.File
 
-/** Polices proposées : celles du système, plus une police importée par l'utilisateur. */
+/**
+ * Polices proposées : quatre polices incluses (licence SIL OFL, voir res/raw/licence_polices.txt),
+ * celles du système, et une police importée par l'utilisateur.
+ */
 object Fonts {
 
     /** Nom affiché de chaque choix de police. */
     fun label(choice: FontChoice): String = when (choice) {
+        FontChoice.NUNITO -> "Ronde (Nunito)"
+        FontChoice.OUTFIT -> "Moderne (Outfit)"
+        FontChoice.MANROPE -> "Nette (Manrope)"
+        FontChoice.PLAYFAIR -> "Chic (Playfair Display)"
         FontChoice.SYSTEM -> "Système"
         FontChoice.LIGHT -> "Fine"
         FontChoice.CONDENSED -> "Condensée"
@@ -23,7 +33,32 @@ object Fonts {
         FontChoice.CUSTOM -> "Ma police"
     }
 
+    private val nunito = FontFamily(
+        Font(R.font.nunito_regular, FontWeight.Normal),
+        Font(R.font.nunito_medium, FontWeight.Medium),
+        Font(R.font.nunito_semibold, FontWeight.SemiBold),
+        Font(R.font.nunito_bold, FontWeight.Bold),
+    )
+    private val outfit = FontFamily(
+        Font(R.font.outfit_light, FontWeight.Light),
+        Font(R.font.outfit_regular, FontWeight.Normal),
+        Font(R.font.outfit_medium, FontWeight.Medium),
+    )
+    private val manrope = FontFamily(
+        Font(R.font.manrope_regular, FontWeight.Normal),
+        Font(R.font.manrope_medium, FontWeight.Medium),
+        Font(R.font.manrope_semibold, FontWeight.SemiBold),
+    )
+    private val playfair = FontFamily(
+        Font(R.font.playfair_regular, FontWeight.Normal),
+        Font(R.font.playfair_medium, FontWeight.Medium),
+    )
+
     fun family(choice: FontChoice, customFontPath: String?): FontFamily = when (choice) {
+        FontChoice.NUNITO -> nunito
+        FontChoice.OUTFIT -> outfit
+        FontChoice.MANROPE -> manrope
+        FontChoice.PLAYFAIR -> playfair
         FontChoice.SYSTEM -> FontFamily.Default
         FontChoice.LIGHT -> systemFamily("sans-serif-light")
         FontChoice.CONDENSED -> systemFamily("sans-serif-condensed")

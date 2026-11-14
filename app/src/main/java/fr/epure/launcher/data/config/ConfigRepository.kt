@@ -28,9 +28,12 @@ object ConfigJson {
     fun encode(config: LauncherConfig, prettyPrint: Boolean = false): String =
         (if (prettyPrint) pretty else compact).encodeToString(LauncherConfig.serializer(), config)
 
-    /** @throws SerializationException si le texte n'est pas une configuration valide. */
+    /**
+     * Lit une configuration (et la met à jour si elle vient d'une version précédente).
+     * @throws SerializationException si le texte n'est pas une configuration valide.
+     */
     fun decode(text: String): LauncherConfig =
-        compact.decodeFromString(LauncherConfig.serializer(), text)
+        compact.decodeFromString(LauncherConfig.serializer(), text).migrated()
 }
 
 private object LauncherConfigSerializer : Serializer<LauncherConfig> {

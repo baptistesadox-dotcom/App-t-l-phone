@@ -2,19 +2,20 @@ package fr.epure.launcher.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -24,21 +25,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.TodoItem
-import fr.epure.launcher.domain.ALL_SECTIONS
+import fr.epure.launcher.data.notifications.AppUserKey
+import fr.epure.launcher.data.notifications.NotificationPreview
+import fr.epure.launcher.ui.common.BoundsHolder
 import fr.epure.launcher.ui.drawer.AlphabetScroller
 import fr.epure.launcher.ui.drawer.AppDrawer
+import fr.epure.launcher.ui.drawer.FAVORITES_ITEM
 import fr.epure.launcher.ui.home.HomeContent
+import fr.epure.launcher.ui.home.ScrollerSpace
 import fr.epure.launcher.ui.sheets.AddToFolderDialog
 import fr.epure.launcher.ui.sheets.AppActionsSheet
 import fr.epure.launcher.ui.sheets.EditTodoDialog
@@ -49,6 +59,7 @@ import fr.epure.launcher.ui.sheets.RenameAppDialog
 import fr.epure.launcher.ui.sheets.WidgetMenuSheet
 import fr.epure.launcher.ui.sheets.WidgetPickerDialog
 import fr.epure.launcher.ui.theme.LocalLauncherLook
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -64,6 +75,7 @@ fun LauncherScreen(
     selectedTab: String?,
     weather: WeatherState,
     agenda: AgendaState,
+    notifications: Map<AppUserKey, List<NotificationPreview>>,
     now: Long,
     use24Hour: Boolean,
     actions: LauncherActions,
@@ -72,13 +84,17 @@ fun LauncherScreen(
     onConfigureWeather: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
     /** Lettre affichée comme touchée (captures d'écran de test uniquement). */
-    previewScrollerLetter: String? = null,
+    previewScrollerItem: String? = null,
 ) {
     val look = LocalLauncherLook.current
-    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     var editingTodo by remember { mutableStateOf<TodoItem?>(null) }
+    val listPosition = remember { BoundsHolder() }
+    val scope = rememberCoroutineScope()
+    var touching by remember { mutableStateOf(false) }
+    val latestDrawer by rememberUpdatedState(drawer)
 
     fun closeDrawer() {
         keyboard?.hide()
@@ -91,6 +107,7 @@ fun LauncherScreen(
     BackHandler(enabled = true) {
         when {
             ui.drawerOpen -> closeDrawer()
+            ui.expandedNotifications != null -> ui.expandedNotifications = null
             ui.expandedFolderId != null -> ui.expandedFolderId = null
         }
     }
@@ -107,27 +124,45 @@ fun LauncherScreen(
     // Revient en haut de la liste quand on change d'onglet ou de recherche.
     LaunchedEffect(selectedTab, query.isBlank()) { listState.scrollToItem(0) }
 
-    Box(Modifier.fillMaxSize()) {
-        // Assombrissement du fond d'écran (réglable).
-        if (look.wallpaperDim > 0f) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = look.wallpaperDim)),
-            )
-        }
+    // Saut à la lettre touchée : son en-tête vient se placer à hauteur du doigt.
+    // (Relancé aussi quand la liste change, par exemple juste après son ouverture.)
+    LaunchedEffect(ui.scrollerLetter, ui.scrollerY, drawer) {
+        val letter = ui.scrollerLetter ?: return@LaunchedEffect
+        val index = latestDrawer.letterIndex[letter] ?: return@LaunchedEffect
+        val listTop = listPosition.bounds()?.top ?: 0f
+        val headerHalf = with(density) { 22.dp.toPx() }
+        val offset = (ui.scrollerY - listTop - headerHalf).toInt().coerceAtLeast(0)
+        listState.scrollToItem(index, -offset)
+    }
 
-        // L'accueil s'efface quand la liste des apps s'ouvre (il reste composé : les widgets
-        // Android ne sont pas recréés).
-        val homeAlpha by animateFloatAsState(
-            targetValue = if (ui.drawerOpen) 0f else 1f,
-            animationSpec = tween(if (ui.drawerOpen) 160 else 240),
-            label = "homeAlpha",
+    // Progression de l'ouverture de la liste (0 = accueil, 1 = liste) : une seule courbe
+    // pilote le recul de l'accueil et l'assombrissement du fond d'écran.
+    val progress by animateFloatAsState(
+        targetValue = if (ui.drawerOpen) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "drawer",
+    )
+
+    val scrimColor = if (look.onWallpaper.luminance() > 0.5f) Color.Black else Color.White
+
+    Box(Modifier.fillMaxSize()) {
+        // Voile sur le fond d'écran : léger sur l'accueil, plus marqué derrière la liste.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val alpha = look.wallpaperDim + (0.62f - look.wallpaperDim).coerceAtLeast(0f) * progress
+                    drawRect(scrimColor.copy(alpha = alpha))
+                },
         )
+
+        // L'accueil recule et s'efface quand la liste s'ouvre (il reste composé : les widgets
+        // Android ne sont pas recréés).
         HomeContent(
             state = state,
             weather = weather,
             agenda = agenda,
+            notifications = notifications,
             now = now,
             use24Hour = use24Hour,
             actions = actions,
@@ -136,13 +171,18 @@ fun LauncherScreen(
             onTodoLongPress = { editingTodo = it },
             onConfigureWeather = onConfigureWeather,
             hostedWidget = hostedWidget,
-            modifier = Modifier.graphicsLayer { alpha = homeAlpha },
+            modifier = Modifier.graphicsLayer {
+                alpha = 1f - progress
+                val scale = 1f - 0.06f * progress
+                scaleX = scale
+                scaleY = scale
+            },
         )
 
         AnimatedVisibility(
             visible = ui.drawerOpen,
-            enter = slideInVertically(tween(260)) { it / 6 } + fadeIn(tween(200)),
-            exit = slideOutVertically(tween(220)) { it / 6 } + fadeOut(tween(180)),
+            enter = slideInVertically(tween(320, easing = FastOutSlowInEasing)) { it / 10 } + fadeIn(tween(260)),
+            exit = slideOutVertically(tween(260, easing = FastOutSlowInEasing)) { it / 10 } + fadeOut(tween(200)),
         ) {
             AppDrawer(
                 drawer = drawer,
@@ -150,41 +190,66 @@ fun LauncherScreen(
                 selectedTab = selectedTab,
                 query = query,
                 listState = listState,
+                notifications = notifications,
+                showDots = state.config.notifications.showDots,
                 actions = actions,
                 ui = ui,
                 onClose = ::closeDrawer,
+                listPosition = listPosition,
             )
         }
 
-        // Alphabet : visible sur l'accueil (si activé) et dans la liste hors recherche.
+        // Alphabet : sur l'accueil (si activé) et dans la liste hors recherche.
         val showScroller = (ui.drawerOpen && !drawer.isSearch) || (!ui.drawerOpen && look.showScrollerOnHome)
         if (showScroller) {
-            val enabledLetters = remember(drawer.letterIndex, state.apps, ui.drawerOpen) {
-                if (ui.drawerOpen) drawer.letterIndex.keys else state.apps.mapTo(HashSet()) { it.section }
+            val letters = remember(drawer.letterIndex, state.apps, ui.drawerOpen) {
+                val sections = if (ui.drawerOpen) drawer.letters else state.apps.map { it.section }.distinct()
+                listOf(FAVORITES_ITEM) + sections
             }
-            AlphabetScroller(
-                letters = ALL_SECTIONS,
-                enabledLetters = enabledLetters,
-                side = look.scrollerSide,
-                restingAlpha = if (ui.drawerOpen) 0.75f else 0.45f,
-                onTouchStart = {
-                    if (!ui.drawerOpen) {
-                        actions.resetDrawer()
-                        ui.drawerOpen = true
-                    }
-                },
-                onLetter = { letter ->
-                    ui.scrollerLetter = letter
-                    drawer.letterIndex[letter]?.let { index -> scope.launch { listState.scrollToItem(index) } }
-                },
-                onTouchEnd = { ui.scrollerLetter = null },
-                previewLetter = previewScrollerLetter,
-                modifier = Modifier
-                    .align(if (look.scrollerSide == ScrollerSide.END) Alignment.CenterEnd else Alignment.CenterStart)
+            BoxWithConstraints(
+                Modifier
+                    .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(top = if (ui.drawerOpen) 132.dp else 96.dp, bottom = 24.dp)
-                    .fillMaxHeight(),
-            )
+                    .padding(top = if (ui.drawerOpen) 128.dp else 72.dp, bottom = 24.dp),
+            ) {
+                AlphabetScroller(
+                    items = letters,
+                    side = look.scrollerSide,
+                    restingAlpha = if (ui.drawerOpen) 0.75f else 0.5f,
+                    onTouchStart = { touching = true },
+                    onItem = { item, y ->
+                        if (item == FAVORITES_ITEM) {
+                            // L'étoile ramène aux favoris.
+                            if (ui.drawerOpen) closeDrawer()
+                            ui.scrollerLetter = null
+                        } else {
+                            if (!ui.drawerOpen) {
+                                actions.resetDrawer()
+                                ui.drawerOpen = true
+                            }
+                            ui.scrollerY = y
+                            ui.scrollerLetter = item
+                        }
+                    },
+                    onTouchEnd = {
+                        touching = false
+                        // On oublie la lettre peu après : la liste ne doit plus y sauter toute seule.
+                        scope.launch {
+                            delay(350)
+                            if (!touching) ui.scrollerLetter = null
+                        }
+                    },
+                    previewItem = previewScrollerItem,
+                    modifier = Modifier
+                        .align(
+                            BiasAlignment(
+                                horizontalBias = if (look.scrollerSide == ScrollerSide.END) 1f else -1f,
+                                verticalBias = 0.35f,
+                            ),
+                        )
+                        .width(ScrollerSpace),
+                )
+            }
         }
     }
 

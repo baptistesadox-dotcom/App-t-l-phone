@@ -107,12 +107,33 @@ class ConfigOpsTest {
     }
 
     @Test
+    fun `migration v1 vers v2 adopte le nouveau style sans ecraser les choix`() {
+        val old = LauncherConfig(schemaVersion = 1).updateAppearance {
+            it.copy(font = FontChoice.SYSTEM, iconSizeDp = 36, wallpaperDim = 0.15f)
+        }
+        val migrated = old.migrated()
+        assertEquals(CURRENT_SCHEMA_VERSION, migrated.schemaVersion)
+        assertEquals(FontChoice.NUNITO, migrated.appearance.font)
+        assertEquals(38, migrated.appearance.iconSizeDp)
+        assertEquals(0.1f, migrated.appearance.wallpaperDim)
+
+        // Un choix personnel (police, taille) est conservé.
+        val custom = LauncherConfig(schemaVersion = 1).updateAppearance { it.copy(font = FontChoice.SERIF, iconSizeDp = 48) }.migrated()
+        assertEquals(FontChoice.SERIF, custom.appearance.font)
+        assertEquals(48, custom.appearance.iconSizeDp)
+
+        // Déjà à jour : rien ne change.
+        val current = LauncherConfig()
+        assertEquals(current, current.migrated())
+    }
+
+    @Test
     fun `import sans widgets Android ni police importee`() {
         val config = base.addHostedWidget(7, 120)
             .updateAppearance { it.copy(font = FontChoice.CUSTOM, customFontPath = "/data/x.ttf") }
             .sanitizedForImport()
         assertTrue(config.widgets.hosted.isEmpty())
-        assertEquals(FontChoice.SYSTEM, config.appearance.font)
+        assertEquals(FontChoice.NUNITO, config.appearance.font)
         assertNull(config.appearance.customFontPath)
         assertTrue(config.onboardingDone)
     }

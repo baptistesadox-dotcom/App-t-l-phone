@@ -183,6 +183,27 @@ fun LauncherConfig.moveHostedWidget(appWidgetId: Int, delta: Int): LauncherConfi
 fun LauncherConfig.updateAppearance(transform: (Appearance) -> Appearance): LauncherConfig =
     copy(appearance = transform(appearance))
 
+// ----- Migrations -----
+
+/**
+ * Met à jour une configuration créée par une version précédente.
+ * v1 → v2 (0.2.0) : nouvelle police et proportions par défaut, si l'utilisateur
+ * n'avait pas changé celles d'origine.
+ */
+fun LauncherConfig.migrated(): LauncherConfig {
+    var config = this
+    if (config.schemaVersion < 2) {
+        config = config.updateAppearance {
+            it.copy(
+                font = if (it.font == FontChoice.SYSTEM) FontChoice.NUNITO else it.font,
+                iconSizeDp = if (it.iconSizeDp == 36) 38 else it.iconSizeDp,
+                wallpaperDim = if (it.wallpaperDim == 0.15f) 0.1f else it.wallpaperDim,
+            )
+        }
+    }
+    return if (config.schemaVersion == CURRENT_SCHEMA_VERSION) config else config.copy(schemaVersion = CURRENT_SCHEMA_VERSION)
+}
+
 // ----- Import / export -----
 
 /**
@@ -193,6 +214,6 @@ fun LauncherConfig.sanitizedForImport(): LauncherConfig = copy(
     onboardingDone = true,
     widgets = widgets.copy(hosted = emptyList()),
     appearance = appearance.copy(customFontPath = null).let {
-        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.SYSTEM) else it
+        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.NUNITO) else it
     },
 )

@@ -199,6 +199,21 @@ class SettingsActivity : ComponentActivity() {
         override fun showMessage(message: String) {
             Toast.makeText(this@SettingsActivity, message, Toast.LENGTH_LONG).show()
         }
+
+        override fun hasNotificationAccess(): Boolean = appContainer.notificationHub.hasAccess()
+
+        override fun openNotificationAccess() {
+            val hub = appContainer.notificationHub
+            if (!SystemActions.start(this@SettingsActivity, hub.accessSettingsIntent())) {
+                SystemActions.start(
+                    this@SettingsActivity,
+                    Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
+                    getString(R.string.error_no_app),
+                )
+            }
+        }
+
+        override fun openAppDetails() = SystemActions.openAppSettings(this@SettingsActivity)
     }
 
     companion object {

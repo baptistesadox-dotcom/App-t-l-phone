@@ -76,6 +76,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import fr.epure.launcher.R
 import fr.epure.launcher.data.config.Appearance
 import fr.epure.launcher.data.config.FontChoice
@@ -124,6 +125,9 @@ interface SettingsCallbacks {
     fun openWallpaperPicker()
     fun openUrl(url: String)
     fun showMessage(message: String)
+    fun hasNotificationAccess(): Boolean
+    fun openNotificationAccess()
+    fun openAppDetails()
 }
 
 /** Racine des réglages avec une navigation simple entre pages. */
@@ -272,6 +276,37 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
         }
         ButtonRow {
             OutlinedButton(onClick = callbacks::addAndroidWidget) { Text(stringResource(R.string.home_menu_add_widget)) }
+        }
+
+        SettingsSection(stringResource(R.string.section_notifications))
+        var access by remember { mutableStateOf(callbacks.hasNotificationAccess()) }
+        // Relu au retour des réglages Android, où l'utilisateur vient peut-être d'autoriser l'accès.
+        LifecycleResumeEffect(Unit) {
+            access = callbacks.hasNotificationAccess()
+            onPauseOrDispose { }
+        }
+        SettingsSwitch(
+            title = stringResource(R.string.notif_show_home),
+            subtitle = stringResource(if (access) R.string.notif_access_on else R.string.notif_access_off),
+            checked = config.notifications.showOnHome,
+            onChange = { v ->
+                vm.update { it.copy(notifications = it.notifications.copy(showOnHome = v)) }
+                if (v && !access) callbacks.openNotificationAccess()
+            },
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.notif_dots),
+            checked = config.notifications.showDots,
+            onChange = { v -> vm.update { it.copy(notifications = it.notifications.copy(showDots = v)) } },
+        )
+        if (!access) {
+            ButtonRow {
+                OutlinedButton(onClick = callbacks::openNotificationAccess) { Text(stringResource(R.string.notif_grant)) }
+            }
+            SettingsNote(stringResource(R.string.notif_restricted_help))
+            ButtonRow {
+                TextButton(onClick = callbacks::openAppDetails) { Text(stringResource(R.string.notif_open_app_info)) }
+            }
         }
 
         SettingsSection(stringResource(R.string.section_gestures))
@@ -785,6 +820,27 @@ private fun BackupPage(callbacks: SettingsCallbacks, back: () -> Unit) {
 
 @Composable
 private fun AboutPage(versionName: String, callbacks: SettingsCallbacks, back: () -> Unit) {
+    var showLicenses by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    if (showLicenses) {
+        val text = remember {
+            runCatching {
+                context.resources.openRawResource(R.raw.licence_polices).bufferedReader().use { it.readText() }
+            }.getOrDefault("")
+        }
+        AlertDialog(
+            onDismissRequest = { showLicenses = false },
+            title = { Text(stringResource(R.string.about_fonts)) },
+            text = {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = { TextButton(onClick = { showLicenses = false }) { Text(stringResource(R.string.action_close)) } },
+        )
+    }
     SettingsScaffold(title = stringResource(R.string.settings_about), onBack = back) {
         Column(Modifier.padding(24.dp)) {
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Light)
@@ -797,6 +853,12 @@ private fun AboutPage(versionName: String, callbacks: SettingsCallbacks, back: (
             subtitle = "open-meteo.com · CC BY 4.0",
             icon = Icons.Outlined.Home,
             onClick = { callbacks.openUrl("https://open-meteo.com/") },
+        )
+        SettingsItem(
+            title = stringResource(R.string.about_fonts),
+            subtitle = "Nunito, Outfit, Manrope, Playfair Display · SIL OFL 1.1",
+            icon = Icons.Outlined.FontDownload,
+            onClick = { showLicenses = true },
         )
     }
 }

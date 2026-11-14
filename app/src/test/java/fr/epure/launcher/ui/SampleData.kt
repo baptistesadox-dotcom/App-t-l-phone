@@ -11,6 +11,9 @@ import fr.epure.launcher.data.config.addTodo
 import fr.epure.launcher.data.config.createFolder
 import fr.epure.launcher.data.config.toggleTodo
 import fr.epure.launcher.data.config.updateWidgets
+import fr.epure.launcher.data.notifications.AppUserKey
+import fr.epure.launcher.data.notifications.NotificationParser
+import fr.epure.launcher.data.notifications.NotificationPreview
 import fr.epure.launcher.domain.DayForecast
 import fr.epure.launcher.domain.WeatherReport
 import java.time.LocalDateTime
@@ -34,18 +37,19 @@ object SampleData {
         "Agenda", "Appareil photo", "Banque", "Calculatrice", "Chrome", "Deezer", "Discord", "Drive",
         "Gmail", "Google Maps", "Horloge", "Instagram", "Keep", "LinkedIn", "Messages", "Météo",
         "Netflix", "Notion", "Paramètres", "Photos", "Signal", "Snapchat", "Spotify", "Téléphone",
-        "Waze", "WhatsApp", "YouTube", "Zoom", "1Password",
+        "Waze", "WhatsApp", "YouTube", "Zoom", "1Password", "Claude", "Uber", "Vinted",
     ).map { app(it) }
 
     fun key(label: String) = apps.first { it.label == label }.key
 
     val config: LauncherConfig = LauncherConfig(onboardingDone = true)
-        .addFavorite(key("Téléphone"))
+        .addFavorite(key("WhatsApp"))
+        .addFavorite(key("Instagram"))
+        .addFavorite(key("Discord"))
         .addFavorite(key("Messages"))
-        .createFolder("social", "Réseaux", listOf(key("Instagram"), key("WhatsApp"), key("Snapchat"), key("Signal"), key("Discord")), onHome = true)
-        .addFavorite(key("Spotify"))
+        .createFolder("social", "Réseaux", listOf(key("Snapchat"), key("Signal"), key("LinkedIn"), key("YouTube")), onHome = true)
         .addFavorite(key("Appareil photo"))
-        .addFavorite(key("Chrome"))
+        .addFavorite(key("Photos"))
         .createFolder("travail", "Travail", listOf(key("Gmail"), key("Notion"), key("Drive"), key("Zoom"), key("LinkedIn")))
         .addTodo("1", "Acheter du pain")
         .addTodo("2", "Appeler Léa pour samedi")
@@ -78,6 +82,29 @@ object SampleData {
             ),
             fetchedAtMillis = now,
         ),
+    )
+
+    /** Notifications d'exemple (une conversation de groupe Discord, deux messages WhatsApp). */
+    val notifications: Map<AppUserKey, List<NotificationPreview>> = NotificationParser.group(
+        listOf(
+            preview("discord", "com.exemple.discord", "Arkange Star Citizen • #médias", "Altaïr : a envoyé une image", minutesAgo = 19),
+            preview("wa1", "com.exemple.whatsapp", "Léa", "On se voit à 18 h ?", minutesAgo = 3),
+            preview("wa2", "com.exemple.whatsapp", "Famille", "Maman : N’oublie pas le gâteau pour dimanche 🎂", minutesAgo = 42),
+        ),
+    )
+
+    private fun preview(key: String, pkg: String, title: String, text: String, minutesAgo: Int) = NotificationPreview(
+        key = key,
+        packageName = pkg,
+        user = Process.myUserHandle(),
+        postTime = now - minutesAgo * 60_000L,
+        title = title,
+        text = text,
+        contentIntent = null,
+        clearable = true,
+        autoCancel = true,
+        groupKey = key,
+        isGroupSummary = false,
     )
 
     val agenda = AgendaState(

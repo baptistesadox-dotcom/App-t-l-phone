@@ -13,6 +13,8 @@ import fr.epure.launcher.data.config.clearDoneTodos
 import fr.epure.launcher.data.config.editTodo
 import fr.epure.launcher.data.config.removeTodo
 import fr.epure.launcher.data.config.toggleTodo
+import fr.epure.launcher.data.notifications.AppUserKey
+import fr.epure.launcher.data.notifications.NotificationPreview
 import fr.epure.launcher.data.weather.WeatherRepository
 import fr.epure.launcher.domain.WeatherReport
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +73,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val source = tab?.let { id -> state.folderById(id)?.apps } ?: state.apps
             buildDrawerList(source, query)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, DrawerList.EMPTY)
+
+    /** Notifications en cours, par app (vide tant que l'accès n'est pas autorisé). */
+    val notifications: StateFlow<Map<AppUserKey, List<NotificationPreview>>> = container.notificationHub.byApp
 
     private val _weather = MutableStateFlow(WeatherState())
     val weather: StateFlow<WeatherState> = _weather.asStateFlow()
@@ -191,6 +196,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Appelé quand l'accueil redevient visible. */
     fun onHomeVisible() {
         appsRepository.refreshIfLocaleChanged()
+        container.notificationHub.ensureBound()
         refreshWeather(force = false)
         refreshAgenda()
     }

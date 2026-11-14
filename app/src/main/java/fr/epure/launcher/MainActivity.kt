@@ -38,6 +38,7 @@ import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.addHostedWidget
 import fr.epure.launcher.data.config.removeHostedWidget
+import fr.epure.launcher.data.notifications.NotificationPreview
 import fr.epure.launcher.ui.AppEntry
 import fr.epure.launcher.ui.LauncherActions
 import fr.epure.launcher.ui.LauncherScreen
@@ -106,6 +107,7 @@ class MainActivity : ComponentActivity() {
             val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
             val weather by viewModel.weather.collectAsStateWithLifecycle()
             val agenda by viewModel.agenda.collectAsStateWithLifecycle()
+            val notifications by viewModel.notifications.collectAsStateWithLifecycle()
             val iconGeneration by container.iconLoader.generation.collectAsStateWithLifecycle()
             val darkText by wallpaperPrefersDarkText
 
@@ -134,6 +136,7 @@ class MainActivity : ComponentActivity() {
                         selectedTab = selectedTab,
                         weather = weather,
                         agenda = agenda,
+                        notifications = notifications,
                         now = now,
                         use24Hour = DateFormat.is24HourFormat(this),
                         actions = actions,
@@ -370,6 +373,18 @@ class MainActivity : ComponentActivity() {
         override fun showMessage(message: String) {
             Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
         }
+
+        override fun openNotification(preview: NotificationPreview) {
+            if (!container.notificationHub.open(preview, this@MainActivity)) {
+                // Notification expirée : on ouvre simplement l'app.
+                viewModel.state.value?.allApps
+                    ?.firstOrNull { it.app.packageName == preview.packageName && it.app.user == preview.user }
+                    ?.let { launch(it, null) }
+            }
+        }
+
+        override fun dismissNotification(preview: NotificationPreview) = container.notificationHub.dismiss(preview)
+
     }
 
     companion object {

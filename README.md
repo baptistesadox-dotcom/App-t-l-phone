@@ -14,18 +14,24 @@ en liste verticale, avec les fonctions qui me manquaient :
   événements de l'agenda, liste de tâches, et n'importe quel widget Android (Google Agenda,
   Keep, météo…).
 
-Et le socle d'un bon launcher : liste alphabétique avec un alphabet latéral « en vague »,
-recherche tolérante (sans accents, par initiales), raccourcis d'apps à l'appui long, glisser
-vers le haut pour la liste et vers le bas pour les notifications, sauvegarde/restauration
-des réglages.
+- **Notifications dans les favoris** : sous le nom de l'app, l'aperçu de la dernière
+  notification (« Discord · 19 min », titre, message) ; le chevron déplie toutes les
+  notifications de l'app, qu'on peut ouvrir ou effacer.
 
-| Accueil | Dossier ouvert | Liste et alphabet | Onglet de dossier |
+Et le socle d'un bon launcher : liste alphabétique avec un alphabet latéral « en vague »
+(les apps de la lettre touchée viennent se placer à hauteur du doigt, l'étoile ramène aux
+favoris), recherche tolérante (sans accents, par initiales), raccourcis d'apps à l'appui
+long, glisser vers le haut pour la liste et vers le bas pour les notifications,
+sauvegarde/restauration des réglages. Police par défaut : Nunito (ronde, comme les
+launchers en liste les plus soignés).
+
+| Accueil | Notifications dépliées | Widgets et dossier | Liste et alphabet |
 |---|---|---|---|
-| ![Accueil](docs/screenshots/1-accueil.png) | ![Dossier](docs/screenshots/2-dossier.png) | ![Liste](docs/screenshots/3-liste-alphabet.png) | ![Onglet](docs/screenshots/4-onglet-dossier.png) |
+| ![Accueil](docs/screenshots/1-accueil.png) | ![Notifications](docs/screenshots/2-notifications.png) | ![Widgets](docs/screenshots/3-widgets-dossier.png) | ![Liste](docs/screenshots/4-liste-alphabet.png) |
 
-| Recherche | Menu d'une app | Personnalisation |
-|---|---|---|
-| ![Recherche](docs/screenshots/5-recherche.png) | ![Menu](docs/screenshots/6-menu-app.png) | ![Personnalisation](docs/screenshots/7-personnalisation.png) |
+| Onglet de dossier | Recherche | Menu d'une app | Personnalisation |
+|---|---|---|---|
+| ![Onglet](docs/screenshots/5-onglet-dossier.png) | ![Recherche](docs/screenshots/6-recherche.png) | ![Menu](docs/screenshots/7-menu-app.png) | ![Personnalisation](docs/screenshots/8-personnalisation.png) |
 
 *Captures générées automatiquement par les tests, avec des apps fictives et un faux fond d'écran.*
 
@@ -41,13 +47,19 @@ des réglages.
 Pour revenir à l'ancien launcher : Paramètres Android › Applications › Applications par défaut
 › Application d'écran d'accueil.
 
+**Notifications sous les apps** : Réglages d'Épure › Accueil et widgets › Notifications ›
+*Autoriser l'accès aux notifications*. Sur Android 13 et plus, une app installée hors Play
+Store est d'abord bloquée (« Paramètre restreint ») : ouvrir les infos de l'app Épure, toucher
+⋮ en haut à droite, *Autoriser les paramètres restreints*, puis recommencer.
+
 ## Gestes
 
 | Geste | Effet |
 |---|---|
 | Glisser vers le haut | Liste de toutes les apps |
 | Glisser vers le bas | Notifications (désactivable) |
-| Glisser le doigt sur l'alphabet | Saut direct à une lettre |
+| Glisser le doigt sur l'alphabet | Saut direct à une lettre (l'étoile ramène aux favoris) |
+| Toucher l'aperçu d'une notification | Ouvre la notification ; le chevron déplie les autres |
 | Appui long sur une app | Raccourcis, favoris, dossier, renommer, masquer, désinstaller |
 | Appui long sur un dossier | Modifier, retirer de l'accueil, supprimer |
 | Appui long sur une zone vide | Ajouter un widget, nouveau dossier, fond d'écran, réglages |
@@ -76,7 +88,8 @@ Pour revenir à l'ancien launcher : Paramètres Android › Applications › App
 app/src/main/java/fr/epure/launcher/
 ├── MainActivity.kt          écran d'accueil (activité HOME), widgets Android
 ├── SettingsActivity.kt      réglages (c'est aussi l'icône « Épure » de la liste)
-├── data/                    apps installées, configuration (JSON), icônes, météo, agenda
+├── data/                    apps installées, configuration (JSON), icônes, météo, agenda,
+│                            notifications (service d'écoute + regroupement par app)
 ├── domain/                  logique pure : recherche, tri, catégories, codes météo
 ├── ui/                      interface Compose (accueil, liste, menus, réglages, thème)
 └── widgets/                 hôte des widgets Android
@@ -86,3 +99,5 @@ app/src/main/res/values/strings.xml   tous les textes de l'app
 ## Crédits
 
 Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
+Polices Nunito, Outfit, Manrope et Playfair Display : SIL Open Font License 1.1
+(texte complet dans `app/src/main/res/raw/licence_polices.txt` et dans Réglages › À propos).
