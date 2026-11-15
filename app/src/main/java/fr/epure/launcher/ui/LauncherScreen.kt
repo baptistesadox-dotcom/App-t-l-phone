@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.ScrollerSide
+import fr.epure.launcher.data.config.ScrollerSpeed
 import fr.epure.launcher.data.config.TodoItem
 import fr.epure.shared.AppUserKey
 import fr.epure.shared.NotificationPreview
@@ -64,6 +66,8 @@ import fr.epure.launcher.ui.sheets.WidgetMenuSheet
 import fr.epure.launcher.ui.sheets.WidgetPickerDialog
 import fr.epure.launcher.ui.theme.LocalLauncherLook
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /**
@@ -100,6 +104,8 @@ fun LauncherScreen(
     val listPosition = remember { BoundsHolder() }
     val scope = rememberCoroutineScope()
     var touching by remember { mutableStateOf(false) }
+    // Vrai quand le saut en cours vient d'ouvrir la liste : il se fait d'un coup.
+    var jumpInstantly by remember { mutableStateOf(true) }
     val latestDrawer by rememberUpdatedState(drawer)
 
     fun closeDrawer() {
@@ -130,15 +136,22 @@ fun LauncherScreen(
     // Revient en haut de la liste quand on change d'onglet ou de recherche.
     LaunchedEffect(selectedTab, query.isBlank()) { listState.scrollToItem(0) }
 
-    // Saut à la lettre touchée : son en-tête vient se placer à hauteur du doigt.
+    // Saut à la lettre touchée : son en-tête vient se placer à hauteur du doigt. La liste y
+    // glisse en douceur (sauf en vitesse « rapide », et au saut qui ouvre la liste), et
+    // l'animation se poursuit si la lettre change entre-temps ou si le doigt se lève.
     // (Relancé aussi quand la liste change, par exemple juste après son ouverture.)
-    LaunchedEffect(ui.scrollerLetter, ui.scrollerY, drawer) {
-        val letter = ui.scrollerLetter ?: return@LaunchedEffect
-        val index = latestDrawer.letterIndex[letter] ?: return@LaunchedEffect
-        val listTop = listPosition.bounds()?.top ?: 0f
-        val headerHalf = with(density) { 22.dp.toPx() }
-        val offset = (ui.scrollerY - listTop - headerHalf).toInt().coerceAtLeast(0)
-        listState.scrollToItem(index, -offset)
+    val latestSpeed by rememberUpdatedState(look.scrollerSpeed)
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val letter = ui.scrollerLetter ?: return@snapshotFlow null
+            val index = latestDrawer.letterIndex[letter] ?: return@snapshotFlow null
+            LetterJump(index, ui.scrollerY, latestDrawer)
+        }.filterNotNull().collectLatest { jump ->
+            val listTop = listPosition.bounds()?.top ?: 0f
+            val headerHalf = with(density) { 22.dp.toPx() }
+            val offset = (jump.fingerY - listTop - headerHalf).toInt().coerceAtLeast(0)
+            listState.scrollToLetter(jump.index, offset, glide = latestSpeed != ScrollerSpeed.FAST && !jumpInstantly)
+        }
     }
 
     // Progression de l'ouverture de la liste (0 = accueil, 1 = liste) : une seule courbe
@@ -252,6 +265,7 @@ fun LauncherScreen(
                             if (ui.drawerOpen) closeDrawer()
                             ui.scrollerLetter = null
                         } else {
+                            jumpInstantly = !ui.drawerOpen
                             if (!ui.drawerOpen) {
                                 actions.resetDrawer()
                                 ui.drawerOpen = true
@@ -297,4 +311,25 @@ fun LauncherScreen(
     }
     if (ui.widgetPickerOpen) WidgetPickerDialog(actions = actions, onDismiss = { ui.widgetPickerOpen = false })
     editingTodo?.let { EditTodoDialog(item = it, actions = actions, onDismiss = { editingTodo = null }) }
+}
+
+/** Lettre à rejoindre : position de son en-tête dans la liste et hauteur du doigt. */
+private class LetterJump(val index: Int, val fingerY: Float, val drawer: DrawerList) {
+    override fun equals(other: Any?): Boolean =
+        other is LetterJump && other.index == index && other.fingerY == fingerY && other.drawer === drawer
+
+    override fun hashCode(): Int = 31 * index + fingerY.hashCode()
+}
+
+/**
+ * Amène l'élément [index] à [offsetPx] du haut de la liste : en glissant (animation courte,
+ * reprise en douceur si la cible change), ou d'un coup si [glide] est faux ou si la liste
+ * n'est pas encore affichée.
+ */
+internal suspend fun LazyListState.scrollToLetter(index: Int, offsetPx: Int, glide: Boolean) {
+    if (glide && layoutInfo.visibleItemsInfo.isNotEmpty()) {
+        animateScrollToItem(index, -offsetPx)
+    } else {
+        scrollToItem(index, -offsetPx)
+    }
 }

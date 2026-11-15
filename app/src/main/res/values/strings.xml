@@ -255,6 +255,11 @@
     <string name="alphabet_right">À droite</string>
     <string name="alphabet_left">À gauche</string>
     <string name="alphabet_on_home">Afficher l’alphabet sur l’accueil</string>
+    <string name="alphabet_speed">Vitesse de défilement</string>
+    <string name="alphabet_speed_slow">Lente</string>
+    <string name="alphabet_speed_normal">Normale</string>
+    <string name="alphabet_speed_fast">Rapide</string>
+    <string name="alphabet_speed_note">Plus c’est lent, plus les lettres sont espacées : il faut bouger le doigt davantage pour changer de lettre (dans la limite de la hauteur de l’écran), et la liste glisse en douceur jusqu’à la lettre. « Rapide » : lettres serrées, saut immédiat.</string>
 
     <!-- Réglages : dossiers -->
     <string name="folders_note">Un dossier peut apparaître sur l’accueil et/ou comme onglet en haut de la liste des apps.</string>

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.epure.launcher.data.config.ScrollerSide
+import fr.epure.launcher.data.config.ScrollerSpeed
 import fr.epure.launcher.ui.theme.LocalLauncherLook
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -57,8 +58,16 @@ const val FAVORITES_ITEM = "★"
 /** Nombre de lettres voisines soulevées de chaque côté par la vague. */
 private const val WAVE_RADIUS = 4.2f
 
-/** Hauteur idéale d'une lettre de l'alphabet. */
-private val PreferredSlot: Dp = 23.dp
+/**
+ * Hauteur idéale d'une lettre de l'alphabet, donc distance à parcourir du doigt pour passer
+ * à la lettre suivante (réduite si l'écran manque de hauteur).
+ */
+val ScrollerSpeed.letterSpacing: Dp
+    get() = when (this) {
+        ScrollerSpeed.SLOW -> 34.dp
+        ScrollerSpeed.NORMAL -> 28.dp
+        ScrollerSpeed.FAST -> 23.dp
+    }
 
 /**
  * Alphabet vertical façon « vague » : en glissant le doigt, les lettres proches
@@ -100,7 +109,8 @@ fun AlphabetScroller(
     val maxShiftPx = with(density) { 52.dp.toPx() }
 
     BoxWithConstraints(modifier) {
-        val slot = if (items.isEmpty()) PreferredSlot else minOf(PreferredSlot, maxHeight / items.size)
+        val preferredSlot = look.scrollerSpeed.letterSpacing
+        val slot = if (items.isEmpty()) preferredSlot else minOf(preferredSlot, maxHeight / items.size)
         val slotPx = with(density) { slot.toPx() }
         val latestSlotPx by rememberUpdatedState(slotPx)
         val letterSize = (slot.value * 0.56f).coerceIn(9f, 13.5f).sp

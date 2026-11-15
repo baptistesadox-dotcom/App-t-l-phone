@@ -31,7 +31,8 @@ Fonctions :
   d'écran « Rivage » fourni, couleur du texte et assombrissement du fond, thème clair/sombre,
   Material You ou couleur d'accent (dont le blanc), polices (Nunito, Outfit, Manrope,
   Montserrat, Playfair, celles du système, ou import d'un `.ttf`/`.otf`), taille du texte,
-  alphabet à droite ou à gauche. Renommer et masquer des apps.
+  alphabet à droite ou à gauche et sa vitesse de défilement (lente, normale, rapide).
+  Renommer et masquer des apps.
 - **Widgets sur l'accueil** : horloge et date, météo (Open-Meteo, sans compte), prochains
   événements de l'agenda, liste de tâches, et n'importe quel widget Android (Google Agenda,
   Keep, météo…).

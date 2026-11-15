@@ -116,6 +116,7 @@ class ConfigOpsTest {
         assertTrue(appearance.dynamicColor)
         assertEquals(HomeTextColor.AUTO, appearance.homeTextColor)
         assertTrue(appearance.showScrollerOnHome)
+        assertEquals(ScrollerSpeed.NORMAL, appearance.scrollerSpeed)
     }
 
     @Test

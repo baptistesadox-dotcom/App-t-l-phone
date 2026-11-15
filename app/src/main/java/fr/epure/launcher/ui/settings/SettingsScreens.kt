@@ -94,6 +94,7 @@ import fr.epure.launcher.data.config.IconStyle
 import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.ScrollerSide
+import fr.epure.launcher.data.config.ScrollerSpeed
 import fr.epure.launcher.data.config.ThemeMode
 import fr.epure.launcher.data.config.WeatherLocation
 import fr.epure.launcher.data.config.WidgetsConfig
@@ -749,6 +750,17 @@ private fun AppearancePage(vm: SettingsViewModel, config: LauncherConfig, callba
             selected = appearance.scrollerSide,
             onSelect = { v -> update { it.copy(scrollerSide = v) } },
         )
+        SettingsChoice(
+            title = stringResource(R.string.alphabet_speed),
+            options = listOf(
+                ScrollerSpeed.SLOW to stringResource(R.string.alphabet_speed_slow),
+                ScrollerSpeed.NORMAL to stringResource(R.string.alphabet_speed_normal),
+                ScrollerSpeed.FAST to stringResource(R.string.alphabet_speed_fast),
+            ),
+            selected = appearance.scrollerSpeed,
+            onSelect = { v -> update { it.copy(scrollerSpeed = v) } },
+        )
+        SettingsNote(stringResource(R.string.alphabet_speed_note))
         SettingsSwitch(
             title = stringResource(R.string.alphabet_on_home),
             checked = appearance.showScrollerOnHome,

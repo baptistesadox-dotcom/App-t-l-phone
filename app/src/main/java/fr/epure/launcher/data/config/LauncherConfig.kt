@@ -92,6 +92,22 @@ enum class HomeStyle {
 enum class ScrollerSide { END, START }
 
 /**
+ * Vitesse de défilement de l'alphabet : écart entre les lettres (donc distance à parcourir
+ * du doigt pour changer de lettre) et façon dont la liste rejoint la lettre.
+ */
+@Serializable
+enum class ScrollerSpeed {
+    /** Lettres très espacées, la liste glisse jusqu'à la lettre. */
+    SLOW,
+
+    /** Lettres espacées, la liste glisse jusqu'à la lettre. */
+    NORMAL,
+
+    /** Lettres serrées, la liste saute d'un coup (comportement de la 0.4.0). */
+    FAST,
+}
+
+/**
  * Apparence. Par défaut : le style Épure (liste aérée, police ronde, couleurs Material You)
  * avec les icônes au trait. Chaque réglage se change séparément dans Réglages › Apparence.
  */
@@ -117,6 +133,7 @@ data class Appearance(
     val wallpaperDim: Float = 0.1f,
     val scrollerSide: ScrollerSide = ScrollerSide.END,
     val showScrollerOnHome: Boolean = true,
+    val scrollerSpeed: ScrollerSpeed = ScrollerSpeed.NORMAL,
     /**
      * Image de l'accueil choisie dans Épure (copie dans le dossier privé de l'app), ou null
      * pour laisser voir le fond d'écran du téléphone.

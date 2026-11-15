@@ -27,6 +27,7 @@ import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.IconStyle
 import fr.epure.launcher.data.config.ScrollerSide
+import fr.epure.launcher.data.config.ScrollerSpeed
 import fr.epure.launcher.data.config.ThemeMode
 
 /** Couleurs d'accent proposées quand Material You est désactivé. */
@@ -58,6 +59,7 @@ data class LauncherLook(
     val isDark: Boolean,
     val iconStyle: IconStyle = IconStyle.LINE,
     val homeStyle: HomeStyle = HomeStyle.LIST,
+    val scrollerSpeed: ScrollerSpeed = ScrollerSpeed.NORMAL,
 ) {
     /** Style d'un texte posé sur le fond d'écran (avec une ombre légère si le texte est clair). */
     fun TextStyle.onWallpaper(muted: Boolean = false): TextStyle =
@@ -197,6 +199,7 @@ fun LauncherTheme(
         isDark = dark,
         iconStyle = appearance.iconStyle,
         homeStyle = appearance.homeStyle,
+        scrollerSpeed = appearance.scrollerSpeed,
     )
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
         CompositionLocalProvider(LocalLauncherLook provides look, content = content)
