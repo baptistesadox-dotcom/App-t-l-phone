@@ -3,10 +3,16 @@
     <string name="app_name">Épure Notifications</string>
     <string name="listener_label">Épure (notifications sur l’accueil)</string>
     <string name="module_title">Notifications pour Épure</string>
-    <string name="module_intro">Ce module affiche tes notifications sous le nom des apps, sur l’écran d’accueil Épure. Il les transmet uniquement à Épure, sur ce téléphone : rien n’est enregistré ni envoyé ailleurs.</string>
+    <string name="module_intro">Ce module affiche tes notifications et la musique en cours sur l’écran d’accueil Épure, et peut verrouiller l’écran quand tu tapes deux fois sur l’accueil. Il transmet tout uniquement à Épure, sur ce téléphone : rien n’est enregistré ni envoyé ailleurs.</string>
     <string name="status_on">✓ Accès aux notifications autorisé. Tu peux fermer cet écran.</string>
     <string name="status_off">Accès aux notifications : pas encore autorisé.</string>
     <string name="button_grant">Autoriser l’accès aux notifications</string>
     <string name="restricted_help">Si Android affiche « Paramètre restreint » : touche le bouton ci-dessous, puis ⋮ en haut à droite › « Autoriser les paramètres restreints », reviens ici et réessaie.</string>
     <string name="button_app_info">Ouvrir les infos de l’app</string>
+    <string name="lock_service_label">Épure : double appui pour verrouiller</string>
+    <string name="lock_service_description">Permet à l’écran d’accueil Épure de verrouiller le téléphone quand tu tapes deux fois sur une zone vide, comme le bouton marche/arrêt (l’empreinte et le visage restent utilisables). Ce service ne lit rien à l’écran et ne reçoit aucune information : il attend seulement la demande d’Épure.</string>
+    <string name="lock_title">Double appui pour verrouiller</string>
+    <string name="lock_status_on">✓ Verrouillage par double appui activé.</string>
+    <string name="lock_status_off">Pour verrouiller l’écran en tapant deux fois sur l’accueil, active « Épure : double appui pour verrouiller » dans les réglages d’accessibilité (Applis installées / Services téléchargés).</string>
+    <string name="button_lock">Ouvrir les réglages d’accessibilité</string>
 </resources>

@@ -25,7 +25,10 @@ device-gamepad-2 movie video news briefcase heart heartbeat book school car bike
 clipboard pencil brush palette search bell star gift tools device-mobile device-tv device-watch bluetooth wifi cast battery thermometer
 umbrella coffee apps layout-grid robot sparkles language stethoscope tag hanger antenna-bars-5 adjustments-horizontal message-chatbot brain
 player-play radio books book-2 basket truck-delivery tool settings-2 cloud-download photo-scan scissors recharging run barbell ticket
-building-store receipt chart-line calendar-event device-floppy printer user-circle""".split()
+building-store receipt chart-line calendar-event device-floppy printer user-circle
+player-pause volume accessible nfc code info-circle refresh bulb moon
+device-sd-card keyboard shield-lock brightness-half access-point database bell-off
+player-skip-forward player-skip-back""".split()
 icons = {}
 for name in want:
     if name not in d:

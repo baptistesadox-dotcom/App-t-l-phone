@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.notifications.NotificationModuleStatus
+import fr.epure.launcher.data.update.UpdateTarget
 import fr.epure.launcher.ui.common.LocalIconProvider
 import fr.epure.launcher.ui.common.LoaderIconProvider
 import fr.epure.launcher.ui.settings.SettingsApp
@@ -69,6 +71,10 @@ class SettingsActivity : ComponentActivity() {
 
     private val calendarPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) Toast.makeText(this, R.string.agenda_permission_denied, Toast.LENGTH_LONG).show()
+    }
+
+    private val contactsPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(this, R.string.search_contacts_denied, Toast.LENGTH_LONG).show()
     }
 
     private val defaultLauncherRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -195,6 +201,22 @@ class SettingsActivity : ComponentActivity() {
 
         override fun requestCalendarPermission() = calendarPermission.launch(Manifest.permission.READ_CALENDAR)
 
+        override fun hasContactsPermission(): Boolean = appContainer.contacts.hasPermission()
+
+        override fun isLockServiceEnabled(): Boolean = appContainer.notificationHub.isLockServiceEnabled()
+
+        override fun moduleSupportsLock(): Boolean =
+            (appContainer.updates.installedVersion(UpdateTarget.MODULE) ?: 0L) >= 2L
+
+        override fun openLockSettings() {
+            val hub = appContainer.notificationHub
+            if (!SystemActions.start(this@SettingsActivity, hub.lockSettingsIntent())) {
+                SystemActions.start(this@SettingsActivity, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), getString(R.string.error_no_app))
+            }
+        }
+
+        override fun requestContactsPermission() = contactsPermission.launch(Manifest.permission.READ_CONTACTS)
+
         override fun hasCalendarPermission(): Boolean =
             ContextCompat.checkSelfPermission(this@SettingsActivity, Manifest.permission.READ_CALENDAR) ==
                 PackageManager.PERMISSION_GRANTED
@@ -283,5 +305,6 @@ class SettingsActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PAGE = "page"
         val PAGE_WIDGETS = SettingsPage.WIDGETS.name
+        val PAGE_ABOUT = SettingsPage.ABOUT.name
     }
 }

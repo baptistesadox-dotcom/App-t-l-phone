@@ -101,6 +101,8 @@ fun TypoHome(
     onConfigureWeather: () -> Unit,
     hostedWidget: @Composable (HostedWidget) -> Unit,
     modifier: Modifier = Modifier,
+    /** Éléments ajoutés au-dessus des favoris (mise à jour, musique), avec les marges reçues. */
+    homeExtras: @Composable (Modifier) -> Unit = {},
 ) {
     val look = LocalLauncherLook.current
     val density = LocalDensity.current
@@ -151,7 +153,7 @@ fun TypoHome(
         Layout(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) { detectTapGestures(onLongPress = { ui.homeMenuOpen = true }) }
+                .homeTaps(config.gestures.doubleTapToLock, ui, actions)
                 .nestedScroll(gestures)
                 .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
@@ -247,6 +249,7 @@ fun TypoHome(
 
                 // ----- Bas : « MES APPS » puis les favoris -----
                 Column {
+                    homeExtras(textPadding)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = textPadding

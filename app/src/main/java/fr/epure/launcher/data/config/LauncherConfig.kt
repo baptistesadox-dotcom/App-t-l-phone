@@ -30,6 +30,7 @@ data class LauncherConfig(
     val todos: List<TodoItem> = emptyList(),
     val gestures: Gestures = Gestures(),
     val notifications: NotificationsConfig = NotificationsConfig(),
+    val search: SearchConfig = SearchConfig(),
 )
 
 /** Un élément de l'écran d'accueil : une app ou un dossier. */
@@ -165,6 +166,8 @@ data class WidgetsConfig(
     /** Nombre de jours d'événements affichés (aujourd'hui inclus). */
     val agendaDays: Int = 2,
     val showTodo: Boolean = true,
+    /** Lecteur de musique au-dessus des favoris (avec le module « Épure Notifications »). */
+    val showMedia: Boolean = true,
     /** Widgets Android ajoutés par l'utilisateur, dans l'ordre d'affichage. */
     val hosted: List<HostedWidget> = emptyList(),
 )
@@ -192,8 +195,21 @@ data class NotificationsConfig(
     val showDots: Boolean = true,
 )
 
+/** Ce que la recherche de la liste des apps trouve en plus des apps. */
+@Serializable
+data class SearchConfig(
+    /** Contacts du téléphone (appeler, écrire). Demande l'accès aux contacts. */
+    val contacts: Boolean = true,
+    /** Calculs (« 12×7 »). */
+    val calculator: Boolean = true,
+    /** Réglages d'Android (Wi-Fi, Bluetooth…) et lampe torche. */
+    val systemSettings: Boolean = true,
+)
+
 @Serializable
 data class Gestures(
     /** Glisser vers le bas sur l'accueil ouvre les notifications. */
     val swipeDownNotifications: Boolean = true,
+    /** Taper deux fois sur une zone vide de l'accueil verrouille l'écran (via le module). */
+    val doubleTapToLock: Boolean = false,
 )

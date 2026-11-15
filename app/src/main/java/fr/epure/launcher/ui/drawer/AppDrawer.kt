@@ -77,6 +77,7 @@ import fr.epure.launcher.ui.FolderEntry
 import fr.epure.launcher.ui.LauncherActions
 import fr.epure.launcher.ui.LauncherUiController
 import fr.epure.launcher.ui.common.AppRow
+import fr.epure.launcher.ui.SearchExtras
 import fr.epure.launcher.ui.common.BoundsHolder
 import fr.epure.launcher.ui.common.LauncherRow
 import fr.epure.launcher.ui.home.HomeMargin
@@ -105,6 +106,8 @@ fun AppDrawer(
     onClose: () -> Unit,
     listPosition: BoundsHolder,
     modifier: Modifier = Modifier,
+    /** Calcul, contacts et réglages d'Android trouvés par la recherche. */
+    extras: SearchExtras = SearchExtras(),
 ) {
     val look = LocalLauncherLook.current
     val density = LocalDensity.current
@@ -155,11 +158,16 @@ fun AppDrawer(
                 onQueryChange = actions::setQuery,
                 onSubmit = {
                     val first = drawer.rows.firstNotNullOfOrNull { (it as? DrawerRow.Item)?.entry }
-                    if (first != null) {
-                        keyboard?.hide()
-                        actions.launch(first, null)
-                    } else if (query.isNotBlank()) {
-                        actions.webSearch(query)
+                    val calculation = extras.calculation
+                    when {
+                        calculation != null -> actions.copyResult(calculation)
+                        first != null -> {
+                            keyboard?.hide()
+                            actions.launch(first, null)
+                        }
+                        extras.contacts.isNotEmpty() -> actions.openContact(extras.contacts.first())
+                        extras.shortcuts.isNotEmpty() -> actions.openShortcut(extras.shortcuts.first())
+                        query.isNotBlank() -> actions.webSearch(query)
                     }
                 },
                 onOpenSettings = actions::openSettings,
@@ -189,6 +197,7 @@ fun AppDrawer(
                         .fillMaxSize()
                         .onPlaced { listPosition.coordinates = it },
                 ) {
+                    if (drawer.isSearch) calculationResult(extras, rowPadding, actions)
                     items(
                         items = drawer.rows,
                         key = { it.key },
@@ -217,7 +226,8 @@ fun AppDrawer(
                         }
                     }
                     if (drawer.isSearch) {
-                        if (drawer.resultCount == 0) {
+                        otherResults(extras, rowPadding, actions)
+                        if (drawer.resultCount == 0 && extras.isEmpty && !extras.askContactsPermission) {
                             item(key = "empty") {
                                 Text(
                                     text = stringResource(R.string.drawer_no_result),

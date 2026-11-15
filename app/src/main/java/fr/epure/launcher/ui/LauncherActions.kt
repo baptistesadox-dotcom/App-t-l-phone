@@ -9,6 +9,8 @@ import fr.epure.launcher.data.apps.AppShortcut
 import fr.epure.launcher.data.calendar.AgendaEvent
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
+import fr.epure.launcher.data.contacts.ContactResult
+import fr.epure.launcher.domain.SystemShortcut
 import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.widgets.WidgetProviderEntry
 
@@ -47,6 +49,16 @@ interface LauncherActions {
     fun openNotification(preview: NotificationPreview)
     fun dismissNotification(preview: NotificationPreview)
 
+    // ----- Recherche : contacts, calculs, réglages d'Android -----
+    fun openContact(contact: ContactResult)
+    fun callContact(contact: ContactResult)
+    fun messageContact(contact: ContactResult)
+    fun openShortcut(shortcut: SystemShortcut)
+    fun copyResult(calculation: Calculation)
+    fun requestContactsPermission()
+
+    /** Double appui sur l'accueil : verrouille l'écran. */
+    fun lockScreen()
 }
 
 open class NoOpActions : LauncherActions {
@@ -79,6 +91,13 @@ open class NoOpActions : LauncherActions {
     override fun showMessage(message: String) = Unit
     override fun openNotification(preview: NotificationPreview) = Unit
     override fun dismissNotification(preview: NotificationPreview) = Unit
+    override fun openContact(contact: ContactResult) = Unit
+    override fun callContact(contact: ContactResult) = Unit
+    override fun messageContact(contact: ContactResult) = Unit
+    override fun openShortcut(shortcut: SystemShortcut) = Unit
+    override fun copyResult(calculation: Calculation) = Unit
+    override fun requestContactsPermission() = Unit
+    override fun lockScreen() = Unit
 }
 
 /** D'où vient l'appui long sur une app (pour proposer les bonnes actions). */

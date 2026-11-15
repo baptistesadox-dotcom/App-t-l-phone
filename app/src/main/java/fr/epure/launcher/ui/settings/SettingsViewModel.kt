@@ -108,6 +108,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val homeImages get() = container.homeImages
 
+    /** Mises à jour d'Épure et du module. */
+    val updates get() = container.updates
+
     /** Importe une image de la galerie comme image de l'accueil ; renvoie false si elle est illisible. */
     suspend fun importHomeImage(uri: Uri): Boolean {
         val path = withContext(Dispatchers.IO) { homeImages.import(uri) } ?: return false

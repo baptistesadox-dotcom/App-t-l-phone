@@ -144,6 +144,30 @@ class NotificationHub(private val context: Context) {
             Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         }
 
+    /** Le service « double appui pour verrouiller » du module est-il activé ? */
+    fun isLockServiceEnabled(): Boolean = NotificationsContract.isLockServiceEnabled(
+        Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES),
+    )
+
+    /** Demande au module de verrouiller l'écran ; false si le service n'est pas activé. */
+    fun lockScreen(): Boolean {
+        if (!isLockServiceEnabled()) return false
+        send(Intent(NotificationsContract.ACTION_LOCK))
+        return true
+    }
+
+    /**
+     * Réglage d'accessibilité où l'on active le verrouillage : la fiche du service quand le
+     * téléphone l'ouvre aux autres apps, sinon la liste (voir SettingsActivity).
+     */
+    fun lockSettingsIntent(): Intent =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
+                .putExtra(Intent.EXTRA_COMPONENT_NAME, NotificationsContract.lockServiceComponent.flattenToString())
+        } else {
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        }
+
     /** Infos de l'app du module (pour « Autoriser les paramètres restreints »). */
     fun moduleDetailsIntent(): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", NotificationsContract.MODULE_PACKAGE, null))

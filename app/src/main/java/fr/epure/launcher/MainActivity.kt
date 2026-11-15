@@ -6,6 +6,8 @@ import android.app.WallpaperColors
 import android.app.WallpaperManager
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -29,7 +31,10 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -40,6 +45,10 @@ import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.addHostedWidget
 import fr.epure.launcher.data.config.afterSystemWallpaperChange
 import fr.epure.launcher.data.config.removeHostedWidget
+import fr.epure.launcher.data.contacts.ContactResult
+import fr.epure.launcher.domain.SystemShortcut
+import fr.epure.launcher.domain.SystemShortcuts
+import fr.epure.launcher.ui.Calculation
 import fr.epure.launcher.data.wallpaper.HomeImage
 import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppEntry
@@ -51,6 +60,9 @@ import fr.epure.launcher.ui.common.LocalIconProvider
 import fr.epure.launcher.ui.common.LoaderIconProvider
 import fr.epure.launcher.ui.theme.LauncherTheme
 import fr.epure.launcher.ui.theme.LocalLauncherLook
+import fr.epure.launcher.ui.home.NowPlayingCard
+import fr.epure.launcher.ui.home.UpdateNotice
+import fr.epure.launcher.ui.settings.UpdateConfirmationEffect
 import fr.epure.launcher.ui.wallpaper.ParallaxWallpaper
 import fr.epure.launcher.ui.widgets.HostedWidgetFrame
 import fr.epure.launcher.ui.widgets.rememberNow
@@ -85,6 +97,11 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshAgenda()
     }
 
+    private val contactsPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(this, R.string.search_contacts_denied, Toast.LENGTH_LONG).show()
+        viewModel.onContactsAccessChanged()
+    }
+
     private val bindWidget = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val id = pendingWidgetId
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return@registerForActivityResult
@@ -114,8 +131,11 @@ class MainActivity : ComponentActivity() {
             val weather by viewModel.weather.collectAsStateWithLifecycle()
             val agenda by viewModel.agenda.collectAsStateWithLifecycle()
             val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+            val searchExtras by viewModel.searchExtras.collectAsStateWithLifecycle()
             val iconGeneration by container.iconLoader.generation.collectAsStateWithLifecycle()
             val darkText by wallpaperPrefersDarkText
+            val updateState by container.updates.state.collectAsStateWithLifecycle()
+            val nowPlaying by container.media.nowPlaying.collectAsStateWithLifecycle()
 
             val currentConfig = config ?: return@setContent
             val currentState = state ?: return@setContent
@@ -141,6 +161,7 @@ class MainActivity : ComponentActivity() {
                         isAppearanceLightNavigationBars = darkIcons
                     }
                 }
+                UpdateConfirmationEffect(container.updates)
                 CompositionLocalProvider(LocalIconProvider provides iconProvider) {
                     LauncherScreen(
                         state = currentState,
@@ -163,6 +184,28 @@ class MainActivity : ComponentActivity() {
                             )
                         },
                         onConfigureWeather = { openSettings(SettingsActivity.PAGE_WIDGETS) },
+                        searchExtras = searchExtras,
+                        homeExtras = { padding ->
+                            if (updateState.updates.isNotEmpty()) {
+                                UpdateNotice(
+                                    text = stringResource(R.string.update_home_notice),
+                                    onClick = { openSettings(SettingsActivity.PAGE_ABOUT) },
+                                    modifier = padding.padding(bottom = 16.dp),
+                                )
+                            }
+                            val playing = nowPlaying
+                            if (playing != null && currentConfig.widgets.showMedia) {
+                                val media = container.media
+                                NowPlayingCard(
+                                    nowPlaying = playing,
+                                    onOpen = { media.open(this@MainActivity) },
+                                    onPlayPause = media::playPause,
+                                    onPrevious = media::previous,
+                                    onNext = media::next,
+                                    modifier = padding.padding(bottom = 14.dp),
+                                )
+                            }
+                        },
                         wallpaper = {
                             if (image != null) {
                                 ParallaxWallpaper(
@@ -421,6 +464,52 @@ class MainActivity : ComponentActivity() {
 
         override fun dismissNotification(preview: NotificationPreview) = container.notificationHub.dismiss(preview)
 
+        override fun openContact(contact: ContactResult) {
+            SystemActions.start(
+                this@MainActivity,
+                Intent(Intent.ACTION_VIEW, container.contacts.contactUri(contact)),
+                getString(R.string.error_no_app),
+            )
+        }
+
+        override fun callContact(contact: ContactResult) {
+            contact.phone?.let { SystemActions.dial(this@MainActivity, it) }
+        }
+
+        override fun messageContact(contact: ContactResult) {
+            contact.phone?.let { SystemActions.sms(this@MainActivity, it) }
+        }
+
+        override fun openShortcut(shortcut: SystemShortcut) {
+            if (shortcut.id == SystemShortcuts.TORCH) {
+                when (container.torch.toggle()) {
+                    true -> showMessage(getString(R.string.search_torch_on))
+                    false -> showMessage(getString(R.string.search_torch_off))
+                    null -> showMessage(getString(R.string.search_torch_unavailable))
+                }
+            } else {
+                SystemActions.openShortcut(this@MainActivity, shortcut)
+            }
+        }
+
+        override fun copyResult(calculation: Calculation) {
+            val clipboard = getSystemService(ClipboardManager::class.java) ?: return
+            clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.search_calc_label), calculation.plain))
+            // Android 13+ affiche déjà sa propre confirmation.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(this@MainActivity, R.string.search_calc_copied, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        override fun requestContactsPermission() = contactsPermission.launch(Manifest.permission.READ_CONTACTS)
+
+        override fun lockScreen() {
+            if (!container.notificationHub.lockScreen()) {
+                // Service pas encore activé (ou module trop ancien) : on explique où l'activer.
+                showMessage(getString(R.string.lock_not_enabled))
+                openSettings(SettingsActivity.PAGE_WIDGETS)
+            }
+        }
     }
 
     companion object {

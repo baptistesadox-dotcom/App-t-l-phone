@@ -14,11 +14,13 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import fr.epure.shared.NotificationsContract
 
 /** Écran d'aide du module : état de l'accès aux notifications et marche à suivre. */
 class ModuleActivity : Activity() {
 
     private lateinit var status: TextView
+    private lateinit var lockStatus: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +55,16 @@ class ModuleActivity : Activity() {
                     open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
                 }
             })
+            addView(text(R.string.lock_title, 20f, bold = true).apply { setPadding(0, pad * 2, 0, pad / 2) })
+            lockStatus = TextView(this@ModuleActivity).apply {
+                textSize = 15f
+                setPadding(0, 0, 0, pad / 2)
+            }
+            addView(lockStatus)
+            addView(Button(this@ModuleActivity).apply {
+                setText(R.string.button_lock)
+                setOnClickListener { open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            })
         }
         val root = ScrollView(this).apply { addView(content) }
         // Le contenu ne passe pas sous les barres système (affichage bord à bord d'Android 15+).
@@ -69,6 +81,10 @@ class ModuleActivity : Activity() {
         val on = ModuleBridge.hasAccess(this)
         status.setText(if (on) R.string.status_on else R.string.status_off)
         if (on) ModuleListenerService.instance?.publish()
+        val lockOn = NotificationsContract.isLockServiceEnabled(
+            Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES),
+        )
+        lockStatus.setText(if (lockOn) R.string.lock_status_on else R.string.lock_status_off)
     }
 
     private fun open(intent: Intent, fallback: Intent? = null) {

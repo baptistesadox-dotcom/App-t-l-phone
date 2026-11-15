@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucun événement reçu, aucun contenu lu : le service sert seulement à verrouiller l'écran. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:description="@string/lock_service_description"
+    android:notificationTimeout="0"
+    android:settingsActivity="fr.epure.notifications.ModuleActivity" />

@@ -85,6 +85,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.epure.launcher.R
 import fr.epure.launcher.data.config.Appearance
 import fr.epure.launcher.data.config.FontChoice
@@ -146,6 +147,12 @@ interface SettingsCallbacks {
     fun applyRivageWallpaper()
     fun pickHomeImage()
     fun applyHomeImageToSystem()
+    fun hasContactsPermission(): Boolean
+    fun requestContactsPermission()
+    fun isLockServiceEnabled(): Boolean
+    /** Le module installé contient-il le service de verrouillage (version 1.1 ou plus) ? */
+    fun moduleSupportsLock(): Boolean
+    fun openLockSettings()
 }
 
 /** Racine des réglages avec une navigation simple entre pages. */
@@ -167,20 +174,22 @@ fun SettingsApp(
     val back: () -> Unit = { if (stack.size > 1) stack = stack.dropLast(1) else onFinish() }
     BackHandler(enabled = stack.size > 1) { back() }
 
+    UpdateConfirmationEffect(vm.updates)
     when (page) {
-        SettingsPage.MAIN -> MainPage(isDefaultLauncher, callbacks, navigate, onFinish)
+        SettingsPage.MAIN -> MainPage(vm, isDefaultLauncher, callbacks, navigate, onFinish)
         SettingsPage.WIDGETS -> WidgetsPage(vm, config, callbacks, back)
         SettingsPage.FAVORITES -> FavoritesPage(vm, config, state, back)
         SettingsPage.APPEARANCE -> AppearancePage(vm, config, callbacks, back)
         SettingsPage.FOLDERS -> FoldersPage(vm, state, callbacks, back)
         SettingsPage.APPS -> AppsPage(vm, state, back)
         SettingsPage.BACKUP -> BackupPage(callbacks, back)
-        SettingsPage.ABOUT -> AboutPage(versionName, callbacks, back)
+        SettingsPage.ABOUT -> AboutPage(vm, versionName, callbacks, back)
     }
 }
 
 @Composable
 private fun MainPage(
+    vm: SettingsViewModel,
     isDefaultLauncher: Boolean,
     callbacks: SettingsCallbacks,
     navigate: (SettingsPage) -> Unit,
@@ -213,6 +222,8 @@ private fun MainPage(
                 }
             }
         }
+        val updateState by vm.updates.state.collectAsStateWithLifecycle()
+        UpdateBanner(updateState) { navigate(SettingsPage.ABOUT) }
         SettingsItem(stringResource(R.string.settings_widgets), stringResource(R.string.settings_widgets_sub), Icons.Outlined.Widgets, onClick = { navigate(SettingsPage.WIDGETS) })
         SettingsItem(stringResource(R.string.settings_favorites), stringResource(R.string.settings_favorites_sub), Icons.Outlined.Star, onClick = { navigate(SettingsPage.FAVORITES) })
         SettingsItem(stringResource(R.string.settings_appearance), stringResource(R.string.settings_appearance_sub), Icons.Outlined.Palette, onClick = { navigate(SettingsPage.APPEARANCE) })
@@ -308,6 +319,7 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
             NotificationModuleStatus.NOT_INSTALLED -> {
                 SettingsNote(stringResource(R.string.notif_module_missing))
                 SettingsNote(stringResource(R.string.notif_module_install_steps))
+                ModuleInstallButton(vm.updates)
             }
             NotificationModuleStatus.NO_ACCESS -> {
                 SettingsNote(stringResource(R.string.notif_module_no_access))
@@ -334,12 +346,76 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
             onChange = { v -> vm.update { it.copy(notifications = it.notifications.copy(showDots = v)) } },
         )
 
+        SettingsSection(stringResource(R.string.section_media))
+        SettingsSwitch(
+            title = stringResource(R.string.widget_media),
+            subtitle = stringResource(R.string.widget_media_sub),
+            checked = widgets.showMedia,
+            onChange = { v -> update { it.copy(showMedia = v) } },
+        )
+
+        SettingsSection(stringResource(R.string.section_search))
+        val search = config.search
+        var contactsAllowed by remember { mutableStateOf(callbacks.hasContactsPermission()) }
+        LifecycleResumeEffect(Unit) {
+            contactsAllowed = callbacks.hasContactsPermission()
+            onPauseOrDispose { }
+        }
+        SettingsSwitch(
+            title = stringResource(R.string.search_option_contacts),
+            subtitle = stringResource(
+                if (search.contacts && !contactsAllowed) R.string.search_option_contacts_missing else R.string.search_option_contacts_sub,
+            ),
+            checked = search.contacts,
+            onChange = { v ->
+                vm.update { it.copy(search = it.search.copy(contacts = v)) }
+                if (v && !contactsAllowed) callbacks.requestContactsPermission()
+            },
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.search_option_calculator),
+            subtitle = stringResource(R.string.search_option_calculator_sub),
+            checked = search.calculator,
+            onChange = { v -> vm.update { it.copy(search = it.search.copy(calculator = v)) } },
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.search_option_settings),
+            subtitle = stringResource(R.string.search_option_settings_sub),
+            checked = search.systemSettings,
+            onChange = { v -> vm.update { it.copy(search = it.search.copy(systemSettings = v)) } },
+        )
+
         SettingsSection(stringResource(R.string.section_gestures))
         SettingsSwitch(
             title = stringResource(R.string.gesture_swipe_down),
             checked = config.gestures.swipeDownNotifications,
             onChange = { v -> vm.update { it.copy(gestures = it.gestures.copy(swipeDownNotifications = v)) } },
         )
+        SettingsSwitch(
+            title = stringResource(R.string.gesture_double_tap_lock),
+            subtitle = stringResource(R.string.gesture_double_tap_lock_sub),
+            checked = config.gestures.doubleTapToLock,
+            onChange = { v -> vm.update { it.copy(gestures = it.gestures.copy(doubleTapToLock = v)) } },
+        )
+        if (config.gestures.doubleTapToLock) {
+            var lockReady by remember { mutableStateOf(callbacks.isLockServiceEnabled()) }
+            LifecycleResumeEffect(Unit) {
+                lockReady = callbacks.isLockServiceEnabled()
+                onPauseOrDispose { }
+            }
+            when {
+                lockReady -> SettingsNote(stringResource(R.string.lock_ready))
+                status == NotificationModuleStatus.NOT_INSTALLED || !callbacks.moduleSupportsLock() ->
+                    SettingsNote(stringResource(R.string.lock_needs_module))
+                else -> {
+                    SettingsNote(stringResource(R.string.lock_needs_service))
+                    ButtonRow {
+                        OutlinedButton(onClick = callbacks::openLockSettings) { Text(stringResource(R.string.lock_enable)) }
+                        TextButton(onClick = callbacks::openNotificationModuleDetails) { Text(stringResource(R.string.notif_open_app_info)) }
+                    }
+                }
+            }
+        }
         SettingsNote(stringResource(R.string.gesture_note))
     }
 
@@ -1007,7 +1083,7 @@ private fun BackupPage(callbacks: SettingsCallbacks, back: () -> Unit) {
 // ----- À propos -----
 
 @Composable
-private fun AboutPage(versionName: String, callbacks: SettingsCallbacks, back: () -> Unit) {
+private fun AboutPage(vm: SettingsViewModel, versionName: String, callbacks: SettingsCallbacks, back: () -> Unit) {
     var showLicenses by remember { mutableStateOf(false) }
     val context = LocalContext.current
     if (showLicenses) {
@@ -1036,6 +1112,8 @@ private fun AboutPage(versionName: String, callbacks: SettingsCallbacks, back: (
             Spacer(Modifier.height(16.dp))
             Text(stringResource(R.string.about_text), style = MaterialTheme.typography.bodyLarge)
         }
+        UpdatesSection(vm.updates)
+        SettingsSection(stringResource(R.string.section_credits))
         SettingsItem(
             title = stringResource(R.string.about_weather_credit),
             subtitle = "open-meteo.com · CC BY 4.0",

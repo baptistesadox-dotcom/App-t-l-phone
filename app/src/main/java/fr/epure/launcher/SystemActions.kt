@@ -17,6 +17,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import fr.epure.launcher.data.calendar.AgendaEvent
+import fr.epure.launcher.domain.SystemShortcut
 
 /** Petites actions système (ouvrir l'horloge, l'agenda, les notifications…). */
 object SystemActions {
@@ -65,6 +66,25 @@ object SystemActions {
             .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, event.endMillis)
         start(context, intent, context.getString(R.string.error_no_app))
     }
+
+    /** Ouvre un réglage d'Android trouvé par la recherche (ou un réglage plus général). */
+    fun openShortcut(context: Context, shortcut: SystemShortcut): Boolean {
+        val action = shortcut.action ?: return false
+        if (action == Intent.ACTION_SET_WALLPAPER) {
+            openWallpaperPicker(context)
+            return true
+        }
+        return start(context, Intent(action)) ||
+            (shortcut.fallbackAction?.let { start(context, Intent(it)) } ?: false) ||
+            start(context, Intent(Settings.ACTION_SETTINGS), context.getString(R.string.error_no_app))
+    }
+
+    /** Ouvre le clavier du téléphone avec le numéro (l'appel part quand on appuie sur Appeler). */
+    fun dial(context: Context, number: String) =
+        start(context, Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)), context.getString(R.string.error_no_app))
+
+    fun sms(context: Context, number: String) =
+        start(context, Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null)), context.getString(R.string.error_no_app))
 
     fun webSearch(context: Context, query: String) {
         val search = Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, query)

@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +21,7 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -30,7 +32,13 @@ import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.ThemeMode
+import fr.epure.launcher.data.config.SearchConfig
 import fr.epure.launcher.data.config.updateWidgets
+import fr.epure.launcher.data.contacts.ContactResult
+import fr.epure.launcher.data.media.NowPlaying
+import fr.epure.launcher.domain.SystemShortcuts
+import fr.epure.launcher.ui.SearchExtras
+import fr.epure.launcher.ui.home.NowPlayingCard
 import fr.epure.launcher.ui.AppMenuOrigin
 import fr.epure.launcher.ui.AppMenuRequest
 import fr.epure.launcher.ui.LauncherScreen
@@ -132,6 +140,8 @@ class ScreenshotTest {
         tab: String? = null,
         scrollerItem: String? = null,
         withNotifications: Boolean = false,
+        searchExtras: SearchExtras = SearchExtras(),
+        homeExtras: @Composable (Modifier) -> Unit = {},
     ) {
         val state = state(config.copy(appearance = appearance))
         val source = tab?.let { id -> state.folderById(id)?.apps } ?: state.apps
@@ -153,6 +163,8 @@ class ScreenshotTest {
                         hostedWidget = {},
                         onConfigureWeather = {},
                         previewScrollerItem = scrollerItem,
+                        searchExtras = searchExtras,
+                        homeExtras = homeExtras,
                     )
                 }
             }
@@ -269,6 +281,38 @@ class ScreenshotTest {
             compose.waitForIdle()
             compose.onRoot().captureRoboImage("$outDir/frame-${i.toString().padStart(2, '0')}.png")
         }
+    }
+
+    // ----- Recherche universelle et lecteur de musique -----
+
+    @Test
+    fun rechercheUniverselle() {
+        val extras = SearchExtras(
+            contacts = listOf(ContactResult(1, "", "Bastien Morel", "06 12 34 56 78")),
+            shortcuts = SystemShortcuts.search("ba"),
+        )
+        render(ui = LauncherUiController(drawerInitiallyOpen = true), query = "ba", searchExtras = extras)
+        compose.onRoot().captureRoboImage("../docs/screenshots/10-recherche.png")
+    }
+
+    @Test
+    fun calcul() {
+        render(
+            ui = LauncherUiController(drawerInitiallyOpen = true),
+            query = "12×7",
+            searchExtras = SearchExtras.instant("12×7", SearchConfig()),
+        )
+        compose.onRoot().captureRoboImage("../docs/screenshots/11-calcul.png")
+    }
+
+    @Test
+    fun lecteurDeMusique() {
+        val playing = NowPlaying("com.spotify.music", "Clair de lune", "Claude Debussy", isPlaying = true, art = null, canSkip = true)
+        render(
+            withNotifications = true,
+            homeExtras = { padding -> NowPlayingCard(playing, {}, {}, {}, {}, padding.padding(bottom = 14.dp)) },
+        )
+        compose.onRoot().captureRoboImage("../docs/screenshots/12-musique.png")
     }
 
     @Test

@@ -39,12 +39,25 @@ Fonctions :
 - **Notifications dans les favoris** : sous le nom de l'app, l'aperçu de la dernière
   notification (« Discord · 19 min », titre, message) ; le chevron déplie toutes les
   notifications de l'app, qu'on peut ouvrir ou effacer.
+- **Lecteur de musique** au-dessus des favoris : titre, artiste, pochette, lecture/pause et
+  morceau suivant, pour Spotify, Deezer, YouTube Music, les podcasts…
+- **Recherche universelle** : en plus des apps, la recherche trouve tes contacts (appeler,
+  écrire), fait les calculs (« 12×7 », « 80*15% ») et ouvre les réglages d'Android (« wifi »,
+  « bluetooth », « batterie »…) ou allume la lampe torche (« lampe »).
+- **Double appui pour verrouiller** : taper deux fois sur une zone vide de l'accueil éteint
+  l'écran (l'empreinte et le visage restent utilisables).
+- **Mises à jour dans l'app** : Épure vérifie s'il existe une nouvelle version (au plus deux
+  fois par jour) et l'installe en un appui, après vérification de l'empreinte du fichier.
 
 Et le socle d'un bon launcher : liste alphabétique avec un alphabet latéral « en vague »
 (les apps de la lettre touchée viennent se placer à hauteur du doigt, l'étoile ramène aux
 favoris), recherche tolérante (sans accents, par initiales), raccourcis d'apps à l'appui
 long, glisser vers le haut pour la liste et vers le bas pour les notifications,
 sauvegarde/restauration des réglages.
+
+| Recherche universelle | Calcul | Lecteur de musique |
+|---|---|---|
+| ![Recherche](docs/screenshots/10-recherche.png) | ![Calcul](docs/screenshots/11-calcul.png) | ![Musique](docs/screenshots/12-musique.png) |
 
 | Image de l'accueil (parallaxe) | Option : accueil typographique | Menu d'une app | Autres réglages |
 |---|---|---|---|
@@ -64,13 +77,23 @@ sauvegarde/restauration des réglages.
 Pour revenir à l'ancien launcher : Paramètres Android › Applications › Applications par défaut
 › Application d'écran d'accueil.
 
-### Notifications sous les apps (facultatif)
+### Mises à jour
 
-Elles passent par un petit module séparé, **Épure Notifications** (`Epure-Notifications.apk`).
-Pourquoi séparé : Google Play Protect bloque automatiquement l'installation, hors Play Store,
-des apps capables de lire les notifications (« Appli bloquée pour protéger votre appareil »).
-Le launcher ne lit donc rien lui-même et ses mises à jour s'installent normalement ; seul le
-module est concerné, et on ne l'installe qu'une fois.
+Depuis la 0.5.0, plus besoin de récupérer l'APK : Réglages › À propos › **Rechercher une mise
+à jour** (une pastille apparaît aussi sur l'accueil quand une version est disponible). La
+première fois, Android demande d'autoriser Épure à installer des applis. Les versions sont
+publiées dans le dossier `updates/` de ce dépôt ; Android n'installe une mise à jour que si
+elle est signée avec la même clé.
+
+### Notifications, musique et verrouillage (facultatif)
+
+Ces trois fonctions passent par un petit module séparé, **Épure Notifications**
+(`Epure-Notifications.apk`, version 1.1 pour la musique et le verrouillage). Pourquoi séparé :
+Google Play Protect bloque automatiquement l'installation, hors Play Store, des apps capables
+de lire les notifications ou d'utiliser l'accessibilité (« Appli bloquée pour protéger votre
+appareil »). Le launcher ne lit donc rien lui-même et ses mises à jour s'installent
+normalement ; seul le module est concerné. Il peut aussi être installé ou mis à jour depuis
+Réglages › Accueil et widgets (Notifications) ou Réglages › À propos.
 
 1. Play Store › photo de profil › **Play Protect** › ⚙ › désactiver *Analyser les applis
    avec Play Protect*.
@@ -78,9 +101,14 @@ module est concerné, et on ne l'installe qu'une fois.
 3. Ouvrir le module (ou Réglages d'Épure › Accueil et widgets › Notifications) ›
    *Autoriser l'accès aux notifications*. Si Android affiche « Paramètre restreint » :
    infos de l'app du module › ⋮ › *Autoriser les paramètres restreints*, puis recommencer.
+4. Pour le **double appui pour verrouiller** : Réglages d'Épure › Accueil et widgets › Gestes ›
+   *Taper deux fois pour verrouiller*, puis activer « Épure : double appui pour verrouiller »
+   dans les réglages d'accessibilité d'Android (même astuce « Paramètre restreint » si besoin).
+   Ce service ne lit rien à l'écran : il sert seulement à verrouiller.
 
-Le module transmet les notifications uniquement à Épure, sur le téléphone (échange réservé
-aux apps signées avec la même clé) : rien n'est enregistré ni envoyé ailleurs.
+Le module transmet les notifications et la musique en cours uniquement à Épure, sur le
+téléphone (échange réservé aux apps signées avec la même clé) : rien n'est enregistré ni
+envoyé ailleurs.
 
 ## Gestes
 
@@ -93,6 +121,7 @@ aux apps signées avec la même clé) : rien n'est enregistré ni envoyé ailleu
 | Appui long sur une app | Raccourcis, favoris, dossier, renommer, masquer, désinstaller |
 | Appui long sur un dossier | Modifier, retirer de l'accueil, supprimer |
 | Appui long sur une zone vide | Ajouter un widget, nouveau dossier, fond d'écran, réglages |
+| Double appui sur une zone vide | Verrouille l'écran (si activé, avec le module) |
 | Appui long sur un widget Android | Agrandir, réduire, déplacer, retirer |
 
 ## Développement
@@ -102,6 +131,9 @@ aux apps signées avec la même clé) : rien n'est enregistré ni envoyé ailleu
   `notifications/build/outputs/apk/release/`). Les deux apps doivent être signées avec la
   même clé.
 - Tests : `./gradlew :app:testDebugUnitTest`.
+- Publier une version pour les mises à jour dans l'app : `./gradlew assembleRelease`, puis
+  `python3 tools/publish_update.py "nouveautés du launcher" "nouveautés du module"` (copie
+  les APK signés dans `updates/` et écrit `updates/latest.json`), puis commit et push.
 - Régénérer les captures : `./gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`,
   puis l'animation : `python3 tools/make_parallax_gif.py app/build/parallaxe docs/screenshots/parallaxe.webp`.
   Aperçu de l'effet avec une autre image : ajouter `-Pepure.demo.image=/chemin/image.jpg

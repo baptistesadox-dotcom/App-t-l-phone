@@ -136,6 +136,18 @@ fun appRowPadding(look: LauncherLook, scrollerVisible: Boolean): PaddingValues {
 }
 
 /**
+ * Appuis sur une zone vide de l'accueil : appui long pour le menu, double appui pour
+ * verrouiller l'écran (si activé).
+ */
+internal fun Modifier.homeTaps(doubleTapToLock: Boolean, ui: LauncherUiController, actions: LauncherActions): Modifier =
+    pointerInput(doubleTapToLock, actions) {
+        detectTapGestures(
+            onLongPress = { ui.homeMenuOpen = true },
+            onDoubleTap = if (doubleTapToLock) { _ -> actions.lockScreen() } else null,
+        )
+    }
+
+/**
  * Gestes de l'accueil : glisser vers le haut ouvre la liste des apps, vers le bas
  * les notifications (une seule fois par geste, ou par un lancer rapide).
  */
@@ -212,6 +224,8 @@ fun HomeContent(
     onConfigureWeather: () -> Unit,
     hostedWidget: @Composable (HostedWidget) -> Unit,
     modifier: Modifier = Modifier,
+    /** Éléments ajoutés au-dessus des favoris (mise à jour, musique), avec les marges reçues. */
+    homeExtras: @Composable (Modifier) -> Unit = {},
 ) {
     val look = LocalLauncherLook.current
     val density = LocalDensity.current
@@ -238,7 +252,7 @@ fun HomeContent(
         Layout(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) { detectTapGestures(onLongPress = { ui.homeMenuOpen = true }) }
+                .homeTaps(config.gestures.doubleTapToLock, ui, actions)
                 .nestedScroll(gestures)
                 .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
@@ -288,6 +302,7 @@ fun HomeContent(
                         )
                         Spacer(Modifier.height(18.dp))
                     }
+                    homeExtras(blockPadding)
                     if (state.home.isEmpty()) {
                         Text(
                             text = stringResource(R.string.home_empty_hint),

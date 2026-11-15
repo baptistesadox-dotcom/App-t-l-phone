@@ -95,6 +95,10 @@ fun LauncherScreen(
     previewScrollerItem: String? = null,
     /** Image de l'accueil dessinée par Épure (effet parallaxe), sous tout le reste. */
     wallpaper: @Composable () -> Unit = {},
+    /** Éléments de l'accueil au-dessus des favoris (mise à jour, musique). */
+    homeExtras: @Composable (Modifier) -> Unit = {},
+    /** Calcul, contacts et réglages d'Android trouvés par la recherche. */
+    searchExtras: SearchExtras = SearchExtras(),
 ) {
     val look = LocalLauncherLook.current
     val density = LocalDensity.current
@@ -202,6 +206,7 @@ fun LauncherScreen(
                 onConfigureWeather = onConfigureWeather,
                 hostedWidget = hostedWidget,
                 modifier = homeModifier,
+                homeExtras = homeExtras,
             )
         } else {
             HomeContent(
@@ -218,6 +223,7 @@ fun LauncherScreen(
                 onConfigureWeather = onConfigureWeather,
                 hostedWidget = hostedWidget,
                 modifier = homeModifier,
+                homeExtras = homeExtras,
             )
         }
 
@@ -238,6 +244,7 @@ fun LauncherScreen(
                 ui = ui,
                 onClose = ::closeDrawer,
                 listPosition = listPosition,
+                extras = searchExtras,
             )
         }
 

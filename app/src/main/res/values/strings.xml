@@ -121,6 +121,61 @@
     <string name="widget_add_failed">Impossible d’ajouter ce widget</string>
     <string name="widget_height">Hauteur : %1$d dp</string>
 
+    <!-- Recherche universelle -->
+    <string name="search_contacts">Contacts</string>
+    <string name="search_settings">Réglages Android</string>
+    <string name="search_contacts_permission">Trouver aussi tes contacts</string>
+    <string name="search_contacts_permission_sub">Touche ici pour autoriser l’accès aux contacts (ils restent sur le téléphone).</string>
+    <string name="search_contacts_denied">Accès aux contacts refusé. Tu peux l’autoriser plus tard dans les infos de l’app Épure.</string>
+    <string name="search_call">Appeler</string>
+    <string name="search_message">Écrire un message</string>
+    <string name="search_calc_copy">Toucher pour copier le résultat</string>
+    <string name="search_calc_label">Résultat</string>
+    <string name="search_calc_copied">Résultat copié</string>
+    <string name="search_torch_on">Lampe allumée</string>
+    <string name="search_torch_off">Lampe éteinte</string>
+    <string name="search_torch_unavailable">Lampe torche indisponible</string>
+    <string name="section_search">Recherche</string>
+    <string name="search_option_contacts">Contacts</string>
+    <string name="search_option_contacts_sub">Appeler ou écrire depuis la recherche</string>
+    <string name="search_option_contacts_missing">Accès aux contacts pas encore autorisé : touche pour l’autoriser</string>
+    <string name="search_option_calculator">Calculs</string>
+    <string name="search_option_calculator_sub">« 12×7 », « (3+4)/2 », « 80*15% »</string>
+    <string name="search_option_settings">Réglages Android et lampe torche</string>
+    <string name="search_option_settings_sub">« wifi », « bluetooth », « batterie », « lampe »…</string>
+
+    <!-- Lecteur de musique -->
+    <string name="media_play">Lecture</string>
+    <string name="media_pause">Pause</string>
+    <string name="media_next">Morceau suivant</string>
+    <string name="media_previous">Morceau précédent</string>
+    <string name="section_media">Musique</string>
+    <string name="widget_media">Lecteur de musique sur l’accueil</string>
+    <string name="widget_media_sub">Titre en cours et boutons lecture, pause, suivant. Passe par le module « Épure Notifications » (version 1.1 ou plus).</string>
+
+    <!-- Mises à jour -->
+    <string name="section_updates">Mises à jour</string>
+    <string name="section_credits">Crédits</string>
+    <string name="update_module_name">Épure Notifications</string>
+    <string name="update_check">Rechercher une mise à jour</string>
+    <string name="update_checking">Recherche en cours…</string>
+    <string name="update_up_to_date">✓ Tout est à jour.</string>
+    <string name="update_available">%1$s %2$s est disponible</string>
+    <string name="update_install">Installer</string>
+    <string name="update_downloading">Téléchargement de %1$s… %2$d %%</string>
+    <string name="update_installing">Installation de %1$s…</string>
+    <string name="update_last_check">Dernière vérification : %1$s à %2$s</string>
+    <string name="update_how">Les nouvelles versions sont publiées dans le dépôt GitHub d’Épure, et Android vérifie qu’elles sont signées avec la même clé avant de les installer. Épure regarde s’il y a du nouveau au plus deux fois par jour, sans rien envoyer d’autre.</string>
+    <string name="update_permission_note">La première fois, Android demande d’autoriser Épure à installer des applis : active l’option, reviens ici et touche à nouveau « Installer ».</string>
+    <string name="update_module_play_protect">Si Play Protect bloque l’installation : Play Store › photo de profil › Play Protect › ⚙ › mets « Analyser les applis » en pause, réessaie, puis réactive-la.</string>
+    <string name="update_error_network">Impossible de joindre GitHub. Vérifie ta connexion et réessaie.</string>
+    <string name="update_error_invalid">Le fichier des versions est illisible. Réessaie plus tard.</string>
+    <string name="update_error_corrupted">Le fichier téléchargé est abîmé. Réessaie.</string>
+    <string name="update_error_install">Android a refusé l’installation</string>
+    <string name="update_banner_hint">Touche ici pour l’installer.</string>
+    <string name="update_home_notice">Nouvelle version d’Épure disponible</string>
+    <string name="notif_module_install">Télécharger et installer le module</string>
+
     <!-- Réglages : fond d’écran Rivage -->
     <string name="rivage_wallpaper">Fond d’écran Rivage</string>
     <string name="rivage_wallpaper_text">Un rivage vu du ciel, en noir et blanc, avec l’effet parallaxe. Il va bien avec les icônes au trait.</string>
@@ -210,6 +265,13 @@
     <string name="notif_open_app_info">Ouvrir les infos du module</string>
     <string name="section_gestures">Gestes</string>
     <string name="gesture_swipe_down">Glisser vers le bas pour les notifications</string>
+    <string name="gesture_double_tap_lock">Taper deux fois pour verrouiller</string>
+    <string name="gesture_double_tap_lock_sub">Sur une zone vide de l’accueil. L’empreinte et le visage restent utilisables pour déverrouiller.</string>
+    <string name="lock_needs_module">Il faut le module « Épure Notifications » (version 1.1 ou plus) : c’est lui qui verrouille l’écran, car Play Protect bloque les apps qui le font quand elles sont installées hors Play Store.</string>
+    <string name="lock_needs_service">Dernière étape : active « Épure : double appui pour verrouiller » dans les réglages d’accessibilité. Si Android affiche « Paramètre restreint », ouvre les infos du module › ⋮ › « Autoriser les paramètres restreints ».</string>
+    <string name="lock_enable">Ouvrir les réglages d’accessibilité</string>
+    <string name="lock_ready">✓ Prêt : tape deux fois sur une zone vide de l’accueil.</string>
+    <string name="lock_not_enabled">Le verrouillage par double appui n’est pas encore activé</string>
     <string name="gesture_note">Glisser vers le haut sur l’accueil ouvre toujours la liste des apps.</string>
 
     <!-- Réglages : favoris -->

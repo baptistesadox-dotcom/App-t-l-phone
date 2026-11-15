@@ -1,0 +1,18 @@
+{
+  "launcher": {
+    "versionCode": 7,
+    "versionName": "0.5.0",
+    "url": "https://raw.githubusercontent.com/baptistesadox-dotcom/App-t-l-phone/ccr-9ef49c26-q77is6/updates/Epure.apk",
+    "sha256": "baef4316b753dfa504d5990b4ab0d941bbea16e35d91dcfb86d26696c000872f",
+    "size": 3034724,
+    "notes": "Lecteur de musique sur l'accueil, recherche universelle (contacts, calculs, réglages Android, lampe torche), double appui pour verrouiller, mises à jour dans l'app."
+  },
+  "module": {
+    "versionCode": 2,
+    "versionName": "1.1",
+    "url": "https://raw.githubusercontent.com/baptistesadox-dotcom/App-t-l-phone/ccr-9ef49c26-q77is6/updates/Epure-Notifications.apk",
+    "sha256": "54f4bb3f317498eca189cf8b29e7c81f29ecd27730d9231edfe780e499eb27cf",
+    "size": 97768,
+    "notes": "Musique en cours sur l'accueil et double appui pour verrouiller (service d'accessibilité à activer)."
+  }
+}

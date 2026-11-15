@@ -18,7 +18,9 @@ import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.data.weather.WeatherRepository
 import fr.epure.launcher.domain.WeatherReport
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +76,28 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val source = tab?.let { id -> state.folderById(id)?.apps } ?: state.apps
             buildDrawerList(source, query)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, DrawerList.EMPTY)
+
+    /** Change quand l'accès aux contacts vient d'être accordé : la recherche est relancée. */
+    private val contactsAccess = MutableStateFlow(0)
+
+    /** Calcul, contacts et réglages d'Android correspondant à la recherche. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val searchExtras: StateFlow<SearchExtras> =
+        combine(_query, config.filterNotNull().map { it.search }.distinctUntilChanged(), contactsAccess) { query, settings, _ ->
+            query to settings
+        }.mapLatest { (query, settings) ->
+            val instant = SearchExtras.instant(query, settings)
+            if (!SearchExtras.wantsContacts(query, settings, instant)) return@mapLatest instant
+            val contactsRepository = container.contacts
+            if (!contactsRepository.hasPermission()) return@mapLatest instant.copy(askContactsPermission = true)
+            // On attend la fin de la frappe avant d'interroger le carnet.
+            delay(120)
+            instant.copy(contacts = withContext(Dispatchers.IO) { contactsRepository.search(query) })
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchExtras())
+
+    fun onContactsAccessChanged() {
+        contactsAccess.value++
+    }
 
     /** Notifications en cours, par app (vide tant que l'accès n'est pas autorisé). */
     val notifications: StateFlow<Map<AppUserKey, List<NotificationPreview>>> = container.notificationHub.byApp
@@ -199,5 +224,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         container.notificationHub.requestSnapshot()
         refreshWeather(force = false)
         refreshAgenda()
+        container.updates.checkIfDue()
     }
 }

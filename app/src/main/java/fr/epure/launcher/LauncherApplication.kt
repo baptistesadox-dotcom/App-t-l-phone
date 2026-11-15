@@ -5,9 +5,13 @@ import android.content.Context
 import fr.epure.launcher.data.apps.AppsRepository
 import fr.epure.launcher.data.calendar.CalendarRepository
 import fr.epure.launcher.data.config.ConfigRepository
+import fr.epure.launcher.data.contacts.ContactsRepository
 import fr.epure.launcher.data.icons.IconLoader
 import fr.epure.launcher.data.icons.IconPackManager
+import fr.epure.launcher.data.media.MediaHub
 import fr.epure.launcher.data.notifications.NotificationHub
+import fr.epure.launcher.data.system.TorchController
+import fr.epure.launcher.data.update.UpdateRepository
 import fr.epure.launcher.data.wallpaper.HomeImageStore
 import fr.epure.launcher.data.weather.WeatherRepository
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +35,11 @@ class AppContainer(context: Context) {
     val weatherRepository = WeatherRepository(appContext)
     val calendarRepository = CalendarRepository(appContext)
     val notificationHub = NotificationHub(appContext)
+    val media = MediaHub(appContext)
     val homeImages = HomeImageStore(appContext)
+    val updates = UpdateRepository(appContext, appScope)
+    val contacts = ContactsRepository(appContext)
+    val torch by lazy { TorchController(appContext) }
 
     init {
         // Une app installée ou mise à jour peut changer d'icône : on vide le cache.

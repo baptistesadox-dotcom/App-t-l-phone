@@ -29,11 +29,36 @@ object NotificationsContract {
     /** Launcher → module : efface cette notification. */
     const val ACTION_DISMISS = "fr.epure.action.NOTIFICATIONS_DISMISS"
 
+    /**
+     * Module → launcher : sessions de lecture en cours (musique, podcasts…), de la plus
+     * récente à la plus ancienne. Le launcher s'en sert pour afficher le lecteur et le
+     * piloter (lecture, pause, piste suivante).
+     */
+    const val ACTION_MEDIA = "fr.epure.action.MEDIA_SESSIONS"
+
+    /** Launcher → module : verrouille l'écran (double appui sur l'accueil). */
+    const val ACTION_LOCK = "fr.epure.action.LOCK_SCREEN"
+
+    /** Service d'accessibilité du module qui verrouille l'écran. */
+    const val LOCK_SERVICE = "fr.epure.notifications.LockService"
+
     const val EXTRA_CONNECTED = "connected"
     const val EXTRA_NOTIFICATIONS = "notifications"
     const val EXTRA_KEY = "key"
+    const val EXTRA_MEDIA_TOKENS = "tokens"
 
     val listenerComponent: ComponentName get() = ComponentName(MODULE_PACKAGE, MODULE_LISTENER)
+
+    val lockServiceComponent: ComponentName get() = ComponentName(MODULE_PACKAGE, LOCK_SERVICE)
+
+    /**
+     * Le service de verrouillage est-il activé dans les réglages d'accessibilité ?
+     * [enabledServices] : valeur de `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES`.
+     */
+    fun isLockServiceEnabled(enabledServices: String?): Boolean {
+        val wanted = lockServiceComponent
+        return enabledServices.orEmpty().split(':').any { ComponentName.unflattenFromString(it.trim()) == wanted }
+    }
 
     fun toBundle(preview: NotificationPreview): Bundle = Bundle().apply {
         putString("key", preview.key)

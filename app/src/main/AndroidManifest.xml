@@ -6,12 +6,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Widget agenda (demandée seulement si tu l'actives) -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- Recherche dans les contacts (facultatif, demandé au premier besoin). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Glisser vers le bas pour ouvrir les notifications -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <!-- Bouton « Utiliser le fond d'écran Rivage » (Réglages › Thèmes) -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- Bouton « Désinstaller » du menu d'une app -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Mises à jour d'Épure (et du module) depuis l'app, après confirmation. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- Échange avec le module « Épure Notifications », réservé aux apps signées avec la même clé.
          Le launcher ne lit pas lui-même les notifications : Google Play Protect bloque
@@ -101,5 +106,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- Résultat des installations de mises à jour (envoyé par Android). -->
+        <receiver
+            android:name=".data.update.InstallStatusReceiver"
+            android:exported="false" />
     </application>
 </manifest>
