@@ -201,6 +201,10 @@ fun LauncherConfig.migrated(): LauncherConfig {
             )
         }
     }
+    if (config.schemaVersion < 3) {
+        // 0.3.0 : le thème « Rivage » devient l'apparence par défaut (favoris et dossiers inchangés).
+        config = ThemePresets.apply(config, ThemePresets.RIVAGE)
+    }
     return if (config.schemaVersion == CURRENT_SCHEMA_VERSION) config else config.copy(schemaVersion = CURRENT_SCHEMA_VERSION)
 }
 
@@ -214,6 +218,6 @@ fun LauncherConfig.sanitizedForImport(): LauncherConfig = copy(
     onboardingDone = true,
     widgets = widgets.copy(hosted = emptyList()),
     appearance = appearance.copy(customFontPath = null).let {
-        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.NUNITO) else it
+        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.MONTSERRAT) else it
     },
 )

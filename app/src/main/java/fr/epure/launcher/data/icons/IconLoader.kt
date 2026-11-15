@@ -2,6 +2,9 @@ package fr.epure.launcher.data.icons
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.os.Build
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
@@ -46,6 +49,38 @@ class IconLoader(
         }
     }
 
+    /** Apps déjà vérifiées qui n'ont pas de version monochrome de leur icône. */
+    private val withoutMonochrome = HashSet<String>()
+
+    /**
+     * Version monochrome de l'icône (calque prévu par l'app pour les icônes à thème
+     * d'Android 13+), en blanc, agrandie pour occuper toute la taille demandée.
+     */
+    suspend fun loadMonochrome(app: InstalledApp, sizePx: Int): ImageBitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+        val key = "mono|" + cacheKey(app.key, sizePx, null)
+        cache.get(key)?.let { return it }
+        if (synchronized(withoutMonochrome) { app.key in withoutMonochrome }) return null
+        return withContext(Dispatchers.IO) {
+            val density = context.resources.displayMetrics.densityDpi
+            val adaptive = runCatching { app.info?.getIcon(density) }.getOrNull() as? AdaptiveIconDrawable
+            val mono = adaptive?.monochrome?.mutate()
+            if (mono == null) {
+                synchronized(withoutMonochrome) { withoutMonochrome += app.key }
+                return@withContext null
+            }
+            runCatching {
+                val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+                // Le calque fait 108 dp dont 72 visibles : on le déborde d'un quart de chaque côté.
+                val inset = sizePx / 4
+                mono.setBounds(-inset, -inset, sizePx + inset, sizePx + inset)
+                mono.setTint(android.graphics.Color.WHITE)
+                mono.draw(Canvas(bitmap))
+                bitmap.asImageBitmap()
+            }.getOrNull()?.also { cache.put(key, it) }
+        }
+    }
+
     suspend fun loadShortcutIcon(shortcut: AppShortcut, sizePx: Int): ImageBitmap? = withContext(Dispatchers.IO) {
         val density = context.resources.displayMetrics.densityDpi
         appsRepository.shortcutIcon(shortcut, density)?.toImageBitmap(sizePx)
@@ -59,6 +94,7 @@ class IconLoader(
     /** À appeler quand une app est installée ou mise à jour (son icône a pu changer). */
     fun clear() {
         cache.evictAll()
+        synchronized(withoutMonochrome) { withoutMonochrome.clear() }
         _generation.value++
     }
 

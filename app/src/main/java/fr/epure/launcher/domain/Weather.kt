@@ -18,6 +18,21 @@ object WeatherCodes {
         else -> WeatherKind.UNKNOWN
     }
 
+    /**
+     * Phrase météo de l'accueil typographique, en majuscules :
+     * « MÉTÉO À LYON : PARTIELLEMENT NUAGEUX, 12°. VENT À 4 KM/H, HUMIDITÉ 61 %. »
+     */
+    fun sentence(city: String, report: WeatherReport): String {
+        val temperature = kotlin.math.round(report.temperature).toInt()
+        val first = "Météo à $city : ${labelOf(report.code, report.isDay).lowercase()}, $temperature°."
+        val details = listOfNotNull(
+            report.windKmh?.let { "vent à $it km/h" },
+            report.humidity?.let { "humidité $it %" },
+        )
+        val second = if (details.isEmpty()) "" else " " + details.joinToString(", ").replaceFirstChar { it.uppercase() } + "."
+        return (first + second).uppercase(java.util.Locale.FRANCE)
+    }
+
     fun labelOf(code: Int, isDay: Boolean = true): String = when (code) {
         0 -> if (isDay) "Ensoleillé" else "Ciel dégagé"
         1 -> "Plutôt dégagé"
@@ -48,6 +63,10 @@ data class WeatherReport(
     val isDay: Boolean,
     val days: List<DayForecast>,
     val fetchedAtMillis: Long,
+    /** Humidité relative en %, si connue. */
+    val humidity: Int? = null,
+    /** Vent en km/h, si connu. */
+    val windKmh: Int? = null,
 )
 
 data class DayForecast(

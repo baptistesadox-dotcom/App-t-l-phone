@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -307,6 +308,7 @@ fun TodoWidget(
     onClearDone: () -> Unit,
     /** Ouvre directement le champ de saisie (captures d'écran de test). */
     startAdding: Boolean = false,
+    textSize: TextUnit = 16.sp,
 ) {
     val look = LocalLauncherLook.current
     val type = MaterialTheme.typography
@@ -314,8 +316,8 @@ fun TodoWidget(
     var adding by rememberSaveable { mutableStateOf(startAdding) }
     var draft by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    val itemStyle = with(look) { type.titleMedium.copy(fontSize = 16.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper() }
-    val mutedStyle = with(look) { type.titleMedium.copy(fontSize = 16.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper(muted = true) }
+    val itemStyle = with(look) { type.titleMedium.copy(fontSize = textSize * textScale, fontWeight = FontWeight.Medium).onWallpaper() }
+    val mutedStyle = with(look) { type.titleMedium.copy(fontSize = textSize * textScale, fontWeight = FontWeight.Medium).onWallpaper(muted = true) }
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {

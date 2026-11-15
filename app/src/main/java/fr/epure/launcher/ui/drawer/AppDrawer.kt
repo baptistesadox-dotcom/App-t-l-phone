@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.epure.launcher.R
+import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.shared.AppUserKey
 import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppMenuOrigin
@@ -79,6 +80,7 @@ import fr.epure.launcher.ui.common.AppRow
 import fr.epure.launcher.ui.common.BoundsHolder
 import fr.epure.launcher.ui.common.LauncherRow
 import fr.epure.launcher.ui.home.HomeMargin
+import fr.epure.launcher.ui.home.appIconGap
 import fr.epure.launcher.ui.home.appLabelStyle
 import fr.epure.launcher.ui.home.appRowPadding
 import fr.epure.launcher.ui.home.forApp
@@ -208,6 +210,7 @@ fun AppDrawer(
                                     ui.appMenu = AppMenuRequest(row.entry, origin)
                                 },
                                 contentPadding = rowPadding,
+                                iconGap = appIconGap(look),
                                 showDot = showDots && notifications.forApp(row.entry).isNotEmpty(),
                                 modifier = Modifier.animateItem(),
                             )
@@ -267,10 +270,15 @@ private fun Modifier.fadingTopEdge(heightPx: Float): Modifier = this
 @Composable
 private fun SectionHeader(letter: String) {
     val look = LocalLauncherLook.current
+    val typographic = look.homeStyle == HomeStyle.TYPOGRAPHIC
     Text(
         text = letter,
         style = with(look) {
-            MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp).onWallpaper(muted = true)
+            MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = if (typographic) 11.sp else 15.sp,
+                letterSpacing = if (typographic) 2.sp else 0.sp,
+            ).onWallpaper(muted = true)
         },
         modifier = Modifier.padding(start = HomeMargin + 2.dp, top = 18.dp, bottom = 2.dp),
     )

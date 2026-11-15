@@ -35,7 +35,8 @@ class ConfigJsonTest {
         val v1 = ConfigJson.encode(LauncherConfig(schemaVersion = 1).updateAppearance { it.copy(font = FontChoice.SYSTEM) })
         val read = ConfigJson.decode(v1)
         assertEquals(CURRENT_SCHEMA_VERSION, read.schemaVersion)
-        assertEquals(FontChoice.NUNITO, read.appearance.font)
+        assertEquals(FontChoice.MONTSERRAT, read.appearance.font)
+        assertEquals(IconStyle.LINE, read.appearance.iconStyle)
     }
 
     @Test
@@ -44,7 +45,7 @@ class ConfigJsonTest {
         val config = ConfigJson.decode(old)
         assertEquals(listOf<HomeItem>(HomeItem.App("k")), config.home)
         // Valeur inconnue : on revient à la valeur par défaut.
-        assertEquals(ThemeMode.SYSTEM, config.appearance.themeMode)
+        assertEquals(Appearance().themeMode, config.appearance.themeMode)
         assertEquals(WidgetsConfig(), config.widgets)
     }
 }

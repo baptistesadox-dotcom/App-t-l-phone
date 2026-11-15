@@ -1,6 +1,7 @@
 package fr.epure.launcher
 
 import android.Manifest
+import android.app.WallpaperManager
 import android.appwidget.AppWidgetHost
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,7 +43,9 @@ import fr.epure.launcher.ui.settings.SettingsViewModel
 import fr.epure.launcher.ui.theme.LauncherTheme
 import fr.epure.launcher.ui.theme.LocalLauncherLook
 import fr.epure.launcher.widgets.LauncherWidgetHost
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 /** Réglages d'Épure. C'est aussi l'icône affichée dans la liste des apps. */
@@ -211,6 +214,22 @@ class SettingsActivity : ComponentActivity() {
                     Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
                     getString(R.string.error_no_app),
                 )
+            }
+        }
+
+        override fun applyRivageWallpaper() {
+            lifecycleScope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val manager = WallpaperManager.getInstance(this@SettingsActivity)
+                        manager.setResource(R.drawable.rivage_wallpaper, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
+                    }.isSuccess
+                }
+                Toast.makeText(
+                    this@SettingsActivity,
+                    if (ok) R.string.rivage_wallpaper_done else R.string.rivage_wallpaper_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
             }
         }
 

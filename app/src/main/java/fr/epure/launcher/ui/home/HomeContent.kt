@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,7 +60,9 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.epure.launcher.R
+import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HostedWidget
+import fr.epure.launcher.data.config.IconStyle
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.TodoItem
 import fr.epure.shared.AppUserKey
@@ -78,6 +81,7 @@ import fr.epure.launcher.ui.common.AppIcon
 import fr.epure.launcher.ui.common.AppRow
 import fr.epure.launcher.ui.common.LauncherRow
 import fr.epure.launcher.ui.common.NotificationDot
+import fr.epure.launcher.ui.icons.LineIcons
 import fr.epure.launcher.ui.theme.LauncherLook
 import fr.epure.launcher.ui.theme.LocalLauncherLook
 import fr.epure.launcher.ui.widgets.GlanceBlock
@@ -90,61 +94,63 @@ val HomeMargin: Dp = 40.dp
 /** Espace réservé à l'alphabet latéral. */
 val ScrollerSpace: Dp = 44.dp
 
-/** Styles de texte des lignes d'apps (nom, puis notification en dessous). */
+/**
+ * Styles de texte des lignes d'apps (nom, puis notification en dessous).
+ * L'accueil typographique utilise de petits libellés, comme sous des icônes au trait.
+ */
 @Composable
 fun appLabelStyle(look: LauncherLook = LocalLauncherLook.current): TextStyle = with(look) {
-    MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper()
+    if (homeStyle == HomeStyle.TYPOGRAPHIC) {
+        MaterialTheme.typography.titleMedium.copy(
+            fontSize = 14.sp * textScale,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.3.sp,
+        ).onWallpaper()
+    } else {
+        MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp * textScale, fontWeight = FontWeight.Medium).onWallpaper()
+    }
 }
 
 @Composable
 fun appSecondaryStyle(look: LauncherLook = LocalLauncherLook.current): TextStyle = with(look) {
-    MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp * textScale, lineHeight = 20.sp * textScale).onWallpaper(muted = true)
+    if (homeStyle == HomeStyle.TYPOGRAPHIC) {
+        MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp * textScale, lineHeight = 16.sp * textScale).onWallpaper(muted = true)
+    } else {
+        MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp * textScale, lineHeight = 20.sp * textScale).onWallpaper(muted = true)
+    }
 }
+
+/** Écart entre l'icône et le nom de l'app. */
+fun appIconGap(look: LauncherLook): Dp = if (look.homeStyle == HomeStyle.TYPOGRAPHIC) 24.dp else 20.dp
 
 /** Espacements des lignes d'apps, selon le côté de l'alphabet. */
 fun appRowPadding(look: LauncherLook, scrollerVisible: Boolean): PaddingValues {
     val space = if (scrollerVisible) ScrollerSpace else 0.dp
+    val vertical = if (look.homeStyle == HomeStyle.TYPOGRAPHIC) 8.dp else 7.dp
     return PaddingValues(
         start = if (look.scrollerSide == ScrollerSide.START) HomeMargin + space else HomeMargin,
         end = if (look.scrollerSide == ScrollerSide.END) 12.dp + space else 16.dp,
-        top = 7.dp,
-        bottom = 7.dp,
+        top = vertical,
+        bottom = vertical,
     )
 }
 
 /**
- * Écran d'accueil : tâches et widgets Android en haut, puis, un peu sous le centre,
- * l'heure suivie des apps favorites (avec leurs notifications).
- * Glisser vers le haut ouvre la liste des apps, vers le bas les notifications.
+ * Gestes de l'accueil : glisser vers le haut ouvre la liste des apps, vers le bas
+ * les notifications (une seule fois par geste, ou par un lancer rapide).
  */
 @Composable
-fun HomeContent(
-    state: LauncherState,
-    weather: WeatherState,
-    agenda: AgendaState,
-    notifications: Map<AppUserKey, List<NotificationPreview>>,
-    now: Long,
-    use24Hour: Boolean,
+internal fun rememberHomeGestures(
     actions: LauncherActions,
-    ui: LauncherUiController,
     onOpenDrawer: () -> Unit,
-    onTodoLongPress: (TodoItem) -> Unit,
-    onConfigureWeather: () -> Unit,
-    hostedWidget: @Composable (HostedWidget) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val look = LocalLauncherLook.current
+    swipeDownNotifications: Boolean,
+): NestedScrollConnection {
     val density = LocalDensity.current
-    val config = state.config
-    val scrollState = rememberScrollState()
     val swipeThresholdPx = with(density) { 72.dp.toPx() }
     val flingThreshold = with(density) { 900.dp.toPx() }
     val latestOpenDrawer by rememberUpdatedState(onOpenDrawer)
-    val swipeDownEnabled by rememberUpdatedState(config.gestures.swipeDownNotifications)
-
-    LaunchedEffect(ui.homeResetCount) { scrollState.animateScrollTo(0) }
-
-    val gestures = remember(actions) {
+    val swipeDownEnabled by rememberUpdatedState(swipeDownNotifications)
+    return remember(actions) {
         object : NestedScrollConnection {
             private var pulledDown = 0f
             private var pulledUp = 0f
@@ -184,6 +190,36 @@ fun HomeContent(
             }
         }
     }
+}
+
+/**
+ * Écran d'accueil : tâches et widgets Android en haut, puis, un peu sous le centre,
+ * l'heure suivie des apps favorites (avec leurs notifications).
+ * Glisser vers le haut ouvre la liste des apps, vers le bas les notifications.
+ */
+@Composable
+fun HomeContent(
+    state: LauncherState,
+    weather: WeatherState,
+    agenda: AgendaState,
+    notifications: Map<AppUserKey, List<NotificationPreview>>,
+    now: Long,
+    use24Hour: Boolean,
+    actions: LauncherActions,
+    ui: LauncherUiController,
+    onOpenDrawer: () -> Unit,
+    onTodoLongPress: (TodoItem) -> Unit,
+    onConfigureWeather: () -> Unit,
+    hostedWidget: @Composable (HostedWidget) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val look = LocalLauncherLook.current
+    val density = LocalDensity.current
+    val config = state.config
+    val scrollState = rememberScrollState()
+    LaunchedEffect(ui.homeResetCount) { scrollState.animateScrollTo(0) }
+
+    val gestures = rememberHomeGestures(actions, onOpenDrawer, config.gestures.swipeDownNotifications)
 
     val rowPadding = appRowPadding(look, look.showScrollerOnHome)
     val blockPadding = Modifier.padding(
@@ -312,7 +348,7 @@ fun Map<AppUserKey, List<NotificationPreview>>.forApp(entry: AppEntry): List<Not
     this[AppUserKey(entry.app.packageName, entry.app.user)].orEmpty()
 
 @Composable
-private fun FavoriteApp(
+internal fun FavoriteApp(
     entry: AppEntry,
     notifications: List<NotificationPreview>,
     now: Long,
@@ -331,6 +367,7 @@ private fun FavoriteApp(
         textStyle = labelStyle,
         showIcon = look.showIcons,
         iconSize = look.iconSize * iconScale,
+        iconGap = appIconGap(look),
         onClick = { bounds -> actions.launch(entry, bounds) },
         onLongClick = { ui.appMenu = AppMenuRequest(entry, origin) },
         contentPadding = rowPadding,
@@ -345,7 +382,7 @@ private fun FavoriteApp(
 }
 
 @Composable
-private fun HomeFolder(
+internal fun HomeFolder(
     folder: FolderEntry,
     expanded: Boolean,
     hasNotifications: Boolean,
@@ -367,7 +404,7 @@ private fun HomeFolder(
         ) {
             if (look.showIcons) {
                 FolderIcon(folder = folder, size = look.iconSize)
-                Spacer(Modifier.width(20.dp))
+                Spacer(Modifier.width(appIconGap(look)))
             }
             Text(
                 text = folder.name,
@@ -424,9 +461,16 @@ private fun HomeFolder(
     }
 }
 
-/** Petite grille des quatre premières icônes du dossier, sur un fond translucide. */
+/** Petite grille des quatre premières icônes du dossier (ou dossier au trait). */
 @Composable
 fun FolderIcon(folder: FolderEntry, size: Dp, modifier: Modifier = Modifier) {
+    val look = LocalLauncherLook.current
+    if (look.iconStyle == IconStyle.LINE) {
+        LineIcons.vector("folder")?.let { vector ->
+            Icon(imageVector = vector, contentDescription = null, tint = LocalContentColor.current, modifier = modifier.size(size))
+            return
+        }
+    }
     val cell = size * 0.38f
     Box(
         modifier = modifier

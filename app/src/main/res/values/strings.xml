@@ -30,6 +30,14 @@
     <string name="home_menu_wallpaper">Fond d’écran</string>
     <string name="home_menu_settings">Réglages d’Épure</string>
 
+    <!-- Accueil typographique (thème Rivage) -->
+    <string name="typo_my">MES</string>
+    <string name="typo_apps">APPS</string>
+    <string name="typo_weather_choose">Météo : touche ici pour choisir ta ville</string>
+    <string name="typo_agenda_allow">Agenda : touche ici pour autoriser l’accès</string>
+    <string name="typo_agenda_empty">Rien de prévu dans l’agenda</string>
+    <string name="typo_agenda_next">Prochain rendez-vous :</string>
+
     <!-- Liste des apps -->
     <string name="drawer_search_hint">Rechercher une app</string>
     <string name="drawer_no_result">Aucune app ne correspond</string>
@@ -113,6 +121,21 @@
     <string name="widget_add_failed">Impossible d’ajouter ce widget</string>
     <string name="widget_height">Hauteur : %1$d dp</string>
 
+    <!-- Réglages : thèmes -->
+    <string name="settings_themes">Thème</string>
+    <string name="theme_custom">Personnalisé</string>
+    <string name="themes_note">Un thème change l’apparence de l’accueil et des icônes. Tes favoris, dossiers et widgets ne bougent pas.</string>
+    <string name="theme_apply">Appliquer</string>
+    <string name="theme_active">Thème actuel</string>
+    <string name="theme_custom_note">Tu as personnalisé l’apparence : appliquer un thème remplace tes réglages d’apparence.</string>
+    <string name="section_rivage_wallpaper">Fond d’écran Rivage</string>
+    <string name="rivage_wallpaper_text">Un rivage vu du ciel, en noir et blanc, créé pour aller avec le thème Rivage.</string>
+    <string name="rivage_wallpaper_apply">Utiliser ce fond d’écran</string>
+    <string name="rivage_wallpaper_confirm_title">Changer de fond d’écran ?</string>
+    <string name="rivage_wallpaper_confirm_text">Le fond d’écran Rivage remplacera ton fond actuel, sur l’accueil et sur l’écran verrouillé.</string>
+    <string name="rivage_wallpaper_done">Fond d’écran appliqué</string>
+    <string name="rivage_wallpaper_failed">Impossible de changer le fond d’écran</string>
+
     <!-- Réglages : accueil -->
     <string name="settings_title">Réglages</string>
     <string name="default_launcher_title">Fais d’Épure ton écran d’accueil</string>
@@ -134,6 +157,8 @@
 
     <!-- Réglages : widgets -->
     <string name="section_clock">Horloge</string>
+    <string name="widget_greeting">Salutation</string>
+    <string name="widget_greeting_sub">« Passe un bon dimanche » en grand, sur l’accueil typographique</string>
     <string name="widget_clock">Afficher l’heure</string>
     <string name="widget_date">Afficher la date</string>
     <string name="section_weather">Météo</string>
@@ -176,7 +201,14 @@
     <string name="favorites_add">Choisir les apps de l’accueil</string>
 
     <!-- Réglages : apparence -->
-    <string name="section_theme">Thème</string>
+    <string name="section_layout">Mise en page</string>
+    <string name="home_style">Accueil</string>
+    <string name="home_style_typo">Typographique</string>
+    <string name="home_style_list">Liste</string>
+    <string name="icon_style">Icônes</string>
+    <string name="icon_style_line">Au trait</string>
+    <string name="icon_style_original">D’origine</string>
+    <string name="section_theme">Couleurs</string>
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
@@ -242,5 +274,5 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_text">Un écran d’accueil minimaliste et personnel : sans publicité, sans abonnement, sans collecte de données.</string>
     <string name="about_weather_credit">Données météo : Open-Meteo</string>
-    <string name="about_fonts">Licences des polices</string>
+    <string name="about_fonts">Licences des polices et des icônes</string>
 </resources>

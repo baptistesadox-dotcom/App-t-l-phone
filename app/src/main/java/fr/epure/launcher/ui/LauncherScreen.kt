@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.TodoItem
@@ -48,6 +51,7 @@ import fr.epure.launcher.ui.drawer.AlphabetScroller
 import fr.epure.launcher.ui.drawer.AppDrawer
 import fr.epure.launcher.ui.drawer.FAVORITES_ITEM
 import fr.epure.launcher.ui.home.HomeContent
+import fr.epure.launcher.ui.home.TypoHome
 import fr.epure.launcher.ui.home.ScrollerSpace
 import fr.epure.launcher.ui.sheets.AddToFolderDialog
 import fr.epure.launcher.ui.sheets.AppActionsSheet
@@ -145,6 +149,8 @@ fun LauncherScreen(
 
     val scrimColor = if (look.onWallpaper.luminance() > 0.5f) Color.Black else Color.White
 
+    // Les icônes au trait prennent la couleur du texte posé sur le fond d'écran.
+    CompositionLocalProvider(LocalContentColor provides look.onWallpaper) {
     Box(Modifier.fillMaxSize()) {
         // Voile sur le fond d'écran : léger sur l'accueil, plus marqué derrière la liste.
         Box(
@@ -158,26 +164,45 @@ fun LauncherScreen(
 
         // L'accueil recule et s'efface quand la liste s'ouvre (il reste composé : les widgets
         // Android ne sont pas recréés).
-        HomeContent(
-            state = state,
-            weather = weather,
-            agenda = agenda,
-            notifications = notifications,
-            now = now,
-            use24Hour = use24Hour,
-            actions = actions,
-            ui = ui,
-            onOpenDrawer = { ui.drawerOpen = true },
-            onTodoLongPress = { editingTodo = it },
-            onConfigureWeather = onConfigureWeather,
-            hostedWidget = hostedWidget,
-            modifier = Modifier.graphicsLayer {
-                alpha = 1f - progress
-                val scale = 1f - 0.06f * progress
-                scaleX = scale
-                scaleY = scale
-            },
-        )
+        val homeModifier = Modifier.graphicsLayer {
+            alpha = 1f - progress
+            val scale = 1f - 0.06f * progress
+            scaleX = scale
+            scaleY = scale
+        }
+        if (look.homeStyle == HomeStyle.TYPOGRAPHIC) {
+            TypoHome(
+                state = state,
+                weather = weather,
+                agenda = agenda,
+                notifications = notifications,
+                now = now,
+                use24Hour = use24Hour,
+                actions = actions,
+                ui = ui,
+                onOpenDrawer = { ui.drawerOpen = true },
+                onTodoLongPress = { editingTodo = it },
+                onConfigureWeather = onConfigureWeather,
+                hostedWidget = hostedWidget,
+                modifier = homeModifier,
+            )
+        } else {
+            HomeContent(
+                state = state,
+                weather = weather,
+                agenda = agenda,
+                notifications = notifications,
+                now = now,
+                use24Hour = use24Hour,
+                actions = actions,
+                ui = ui,
+                onOpenDrawer = { ui.drawerOpen = true },
+                onTodoLongPress = { editingTodo = it },
+                onConfigureWeather = onConfigureWeather,
+                hostedWidget = hostedWidget,
+                modifier = homeModifier,
+            )
+        }
 
         AnimatedVisibility(
             visible = ui.drawerOpen,
@@ -251,6 +276,7 @@ fun LauncherScreen(
                 )
             }
         }
+    }
     }
 
     // ----- Menus et fenêtres -----

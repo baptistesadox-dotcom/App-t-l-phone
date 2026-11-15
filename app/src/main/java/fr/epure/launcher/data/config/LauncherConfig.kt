@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** Version du format de configuration (voir [migrated]). */
-const val CURRENT_SCHEMA_VERSION = 2
+const val CURRENT_SCHEMA_VERSION = 3
 
 /**
  * Toute la configuration de l'utilisateur, enregistrée en JSON.
@@ -60,38 +60,66 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 @Serializable
 enum class HomeTextColor { AUTO, LIGHT, DARK }
 
-/** Polices : NUNITO, OUTFIT, MANROPE et PLAYFAIR sont incluses dans l'app, les autres viennent d'Android. */
+/**
+ * Polices : MONTSERRAT, NUNITO, OUTFIT, MANROPE et PLAYFAIR sont incluses dans l'app,
+ * les autres viennent d'Android.
+ */
 @Serializable
-enum class FontChoice { NUNITO, OUTFIT, MANROPE, PLAYFAIR, SYSTEM, LIGHT, CONDENSED, SERIF, MONO, CASUAL, CURSIVE, CUSTOM }
+enum class FontChoice { MONTSERRAT, NUNITO, OUTFIT, MANROPE, PLAYFAIR, SYSTEM, LIGHT, CONDENSED, SERIF, MONO, CASUAL, CURSIVE, CUSTOM }
+
+/** Style des icônes d'apps. */
+@Serializable
+enum class IconStyle {
+    /** Icônes blanches au trait fin, toutes du même style. */
+    LINE,
+
+    /** Icônes d'origine des apps (ou du pack d'icônes choisi). */
+    ORIGINAL,
+}
+
+/** Mise en page de l'écran d'accueil. */
+@Serializable
+enum class HomeStyle {
+    /** Grande typographie en haut (« PASSE UN BON DIMANCHE »), apps en liste compacte en bas. */
+    TYPOGRAPHIC,
+
+    /** Heure au-dessus d'une liste d'apps aérée, au centre de l'écran. */
+    LIST,
+}
 
 /** Côté de l'écran où se trouve l'alphabet. */
 @Serializable
 enum class ScrollerSide { END, START }
 
+/** Valeurs par défaut : celles du thème « Rivage » (voir [ThemePresets]). */
 @Serializable
 data class Appearance(
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.DARK,
     /** Couleurs Material You tirées du fond d'écran (Android 12+). */
-    val dynamicColor: Boolean = true,
+    val dynamicColor: Boolean = false,
     /** Couleur d'accent ARGB, utilisée quand les couleurs dynamiques sont désactivées. */
-    val accentColor: Long = 0xFF8AB4F8,
-    val homeTextColor: HomeTextColor = HomeTextColor.AUTO,
-    val font: FontChoice = FontChoice.NUNITO,
+    val accentColor: Long = 0xFFFFFFFF,
+    val homeTextColor: HomeTextColor = HomeTextColor.LIGHT,
+    val font: FontChoice = FontChoice.MONTSERRAT,
     /** Chemin du fichier de police importé (dossier privé de l'app). */
     val customFontPath: String? = null,
     val textScale: Float = 1f,
     val showIcons: Boolean = true,
-    val iconSizeDp: Int = 38,
+    val iconSizeDp: Int = 28,
+    val iconStyle: IconStyle = IconStyle.LINE,
+    val homeStyle: HomeStyle = HomeStyle.TYPOGRAPHIC,
     /** Nom de paquet du pack d'icônes choisi, ou null pour les icônes d'origine. */
     val iconPack: String? = null,
     /** Assombrissement du fond d'écran, de 0 (aucun) à 1 (noir). */
-    val wallpaperDim: Float = 0.1f,
+    val wallpaperDim: Float = 0.2f,
     val scrollerSide: ScrollerSide = ScrollerSide.END,
-    val showScrollerOnHome: Boolean = true,
+    val showScrollerOnHome: Boolean = false,
 )
 
 @Serializable
 data class WidgetsConfig(
+    /** Grande salutation de l'accueil typographique (« PASSE UN BON DIMANCHE »). */
+    val showGreeting: Boolean = true,
     val showClock: Boolean = true,
     val showDate: Boolean = true,
     val showWeather: Boolean = false,

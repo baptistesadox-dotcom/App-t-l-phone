@@ -16,6 +16,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /*
  * Météo fournie gratuitement et sans clé par Open-Meteo (open-meteo.com),
@@ -44,6 +45,8 @@ internal data class ForecastResponse(
         @SerialName("temperature_2m") val temperature: Double,
         @SerialName("weather_code") val weatherCode: Int,
         @SerialName("is_day") val isDay: Int = 1,
+        @SerialName("relative_humidity_2m") val humidity: Double? = null,
+        @SerialName("wind_speed_10m") val windSpeed: Double? = null,
     )
 
     @Serializable
@@ -86,6 +89,8 @@ object OpenMeteoParser {
             isDay = current.isDay != 0,
             days = days,
             fetchedAtMillis = nowMillis,
+            humidity = current.humidity?.roundToInt(),
+            windKmh = current.windSpeed?.roundToInt(),
         )
     }
 }
@@ -123,7 +128,7 @@ class WeatherRepository(context: Context) {
         val url = String.format(
             Locale.ROOT,
             "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f" +
-                "&current=temperature_2m,weather_code,is_day" +
+                "&current=temperature_2m,weather_code,is_day,relative_humidity_2m,wind_speed_10m" +
                 "&daily=weather_code,temperature_2m_max,temperature_2m_min" +
                 "&timezone=auto&forecast_days=4",
             location.latitude,

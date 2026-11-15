@@ -1,7 +1,20 @@
 # Épure — mon écran d'accueil Android
 
 Épure est un launcher (écran d'accueil) Android minimaliste, inspiré du principe des launchers
-en liste verticale, avec les fonctions qui me manquaient :
+en liste verticale, avec les fonctions qui me manquaient.
+
+**Thème par défaut : « Rivage »** — noir et blanc, grande typographie (« PASSE UN **BON**
+DIMANCHE », mot en négatif), petite ligne heure/date, phrase météo en petites capitales,
+« MES **APPS** » et des **icônes au trait** blanches pour toutes les apps (logos des apps connues,
+pictogrammes des apps système, version monochrome d'Android 13+ sinon). Un fond d'écran
+« Rivage » (rivage vu du ciel, généré pour l'app) peut être appliqué depuis Réglages › Thème.
+Le thème « Épure » (liste aérée, icônes d'origine) reste disponible au même endroit.
+
+| Rivage : accueil | Rivage : liste et alphabet | Rivage : onglet de dossier |
+|---|---|---|
+| ![Accueil Rivage](docs/screenshots/1-rivage-accueil.png) | ![Liste Rivage](docs/screenshots/2-rivage-liste.png) | ![Onglet](docs/screenshots/3-rivage-onglet.png) |
+
+Fonctions :
 
 - **Dossiers et catégories** : dossiers sur l'accueil (ils s'ouvrent sur place), onglets de
   dossiers en haut de la liste des apps, rangement automatique par catégorie (Jeux, Musique,
@@ -25,13 +38,9 @@ long, glisser vers le haut pour la liste et vers le bas pour les notifications,
 sauvegarde/restauration des réglages. Police par défaut : Nunito (ronde, comme les
 launchers en liste les plus soignés).
 
-| Accueil | Notifications dépliées | Widgets et dossier | Liste et alphabet |
-|---|---|---|---|
-| ![Accueil](docs/screenshots/1-accueil.png) | ![Notifications](docs/screenshots/2-notifications.png) | ![Widgets](docs/screenshots/3-widgets-dossier.png) | ![Liste](docs/screenshots/4-liste-alphabet.png) |
-
-| Onglet de dossier | Recherche | Menu d'une app | Personnalisation |
-|---|---|---|---|
-| ![Onglet](docs/screenshots/5-onglet-dossier.png) | ![Recherche](docs/screenshots/6-recherche.png) | ![Menu](docs/screenshots/7-menu-app.png) | ![Personnalisation](docs/screenshots/8-personnalisation.png) |
+| Épure : accueil | Notifications dépliées | Widgets et dossier | Menu d'une app | Personnalisation |
+|---|---|---|---|---|
+| ![Épure](docs/screenshots/4-epure-accueil.png) | ![Notifications](docs/screenshots/5-epure-notifications.png) | ![Widgets](docs/screenshots/6-epure-widgets-dossier.png) | ![Menu](docs/screenshots/7-menu-app.png) | ![Personnalisation](docs/screenshots/8-personnalisation.png) |
 
 *Captures générées automatiquement par les tests, avec des apps fictives et un faux fond d'écran.*
 
@@ -116,5 +125,8 @@ notifications/ module « Épure Notifications » (lecteur de notifications, écr
 ## Crédits
 
 Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0).
-Polices Nunito, Outfit, Manrope et Playfair Display : SIL Open Font License 1.1
-(texte complet dans `app/src/main/res/raw/licence_polices.txt` et dans Réglages › À propos).
+Polices Montserrat, Nunito, Outfit, Manrope et Playfair Display : SIL Open Font License 1.1.
+Icônes au trait : [Tabler Icons](https://tabler.io/icons) (MIT), converties par
+`tools/gen_line_icons.py`. Fond d'écran Rivage : généré par `tools/gen_rivage_wallpaper.py`.
+Textes complets des licences dans `app/src/main/res/raw/licence_polices.txt` et dans
+Réglages › À propos.

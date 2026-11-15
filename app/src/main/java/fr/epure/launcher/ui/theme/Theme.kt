@@ -23,7 +23,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fr.epure.launcher.data.config.Appearance
+import fr.epure.launcher.data.config.HomeStyle
 import fr.epure.launcher.data.config.HomeTextColor
+import fr.epure.launcher.data.config.IconStyle
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.ThemeMode
 
@@ -53,6 +55,8 @@ data class LauncherLook(
     val scrollerSide: ScrollerSide,
     val showScrollerOnHome: Boolean,
     val isDark: Boolean,
+    val iconStyle: IconStyle = IconStyle.ORIGINAL,
+    val homeStyle: HomeStyle = HomeStyle.LIST,
 ) {
     /** Style d'un texte posé sur le fond d'écran (avec une ombre légère si le texte est clair). */
     fun TextStyle.onWallpaper(muted: Boolean = false): TextStyle =
@@ -190,6 +194,8 @@ fun LauncherTheme(
         scrollerSide = appearance.scrollerSide,
         showScrollerOnHome = appearance.showScrollerOnHome,
         isDark = dark,
+        iconStyle = appearance.iconStyle,
+        homeStyle = appearance.homeStyle,
     )
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
         CompositionLocalProvider(LocalLauncherLook provides look, content = content)

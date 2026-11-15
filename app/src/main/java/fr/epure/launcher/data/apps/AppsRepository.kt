@@ -9,14 +9,18 @@ import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import android.provider.AlarmClock
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
+import fr.epure.launcher.domain.LineIconMatcher
 import fr.epure.shared.NotificationsContract
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -41,6 +45,8 @@ data class InstalledApp(
     val isWorkProfile: Boolean,
     /** Infos système, utilisées pour charger l'icône (null dans les tests). */
     val info: LauncherActivityInfo? = null,
+    /** Icône au trait choisie pour cette app (nom Tabler), ou null. */
+    val lineIcon: String? = null,
 )
 
 object AppKeys {
@@ -112,6 +118,7 @@ class AppsRepository(private val context: Context, private val scope: CoroutineS
     private fun loadApps(): List<InstalledApp> {
         loadedLocale = context.resources.configuration.locales[0]
         val mainUser = Process.myUserHandle()
+        val roles = resolveRoleIcons()
         return userManager.userProfiles.flatMap { user ->
             val serial = userManager.getSerialNumberForUser(user)
             val isMain = user == mainUser
@@ -130,9 +137,48 @@ class AppsRepository(private val context: Context, private val scope: CoroutineS
                         category = info.applicationInfo.category,
                         isWorkProfile = !isMain,
                         info = info,
+                        lineIcon = LineIconMatcher.match(
+                            packageName = info.componentName.packageName,
+                            declaredCategory = info.applicationInfo.category,
+                            roleIcon = roles[info.componentName.packageName],
+                        ),
                     )
                 }
         }
+    }
+
+    /**
+     * Apps qui jouent un rôle sur ce téléphone (téléphone, SMS, appareil photo, agenda…),
+     * pour leur donner l'icône au trait correspondante quel que soit le fabricant.
+     */
+    private fun resolveRoleIcons(): Map<String, String> {
+        val pm = context.packageManager
+        fun category(name: String) = Intent(Intent.ACTION_MAIN).addCategory(name)
+        val roles = buildList {
+            add(Intent(Intent.ACTION_DIAL) to "phone")
+            add(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")) to "message-circle")
+            add(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA) to "camera")
+            add(category(Intent.CATEGORY_APP_GALLERY) to "photo")
+            add(category(Intent.CATEGORY_APP_CALENDAR) to "calendar")
+            add(category(Intent.CATEGORY_APP_CONTACTS) to "address-book")
+            add(category(Intent.CATEGORY_APP_EMAIL) to "mail")
+            add(category(Intent.CATEGORY_APP_MAPS) to "map")
+            add(category(Intent.CATEGORY_APP_MUSIC) to "music")
+            add(category(Intent.CATEGORY_APP_CALCULATOR) to "calculator")
+            add(Intent(AlarmClock.ACTION_SHOW_ALARMS) to "clock")
+            add(Intent(Settings.ACTION_SETTINGS) to "settings")
+            add(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.wikipedia.org")) to "world")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(category(Intent.CATEGORY_APP_FILES) to "folder")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(category(Intent.CATEGORY_APP_WEATHER) to "cloud")
+        }
+        val result = HashMap<String, String>()
+        for ((intent, icon) in roles) {
+            val pkg = runCatching {
+                pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+            }.getOrNull()
+            if (pkg != null && pkg != "android") result.putIfAbsent(pkg, icon)
+        }
+        return result
     }
 
     /** Lance l'app. Renvoie false si elle n'a pas pu être ouverte (désinstallée, profil en pause…). */

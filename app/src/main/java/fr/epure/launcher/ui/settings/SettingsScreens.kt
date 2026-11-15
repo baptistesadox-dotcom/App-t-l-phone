@@ -3,6 +3,7 @@ package fr.epure.launcher.ui.settings
 import android.appwidget.AppWidgetManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +73,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -81,10 +84,13 @@ import fr.epure.launcher.R
 import fr.epure.launcher.data.config.Appearance
 import fr.epure.launcher.data.config.FontChoice
 import fr.epure.launcher.data.config.HomeItem
+import fr.epure.launcher.data.config.HomeStyle
+import fr.epure.launcher.data.config.IconStyle
 import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.ThemeMode
+import fr.epure.launcher.data.config.ThemePresets
 import fr.epure.launcher.data.config.WeatherLocation
 import fr.epure.launcher.data.config.WidgetsConfig
 import fr.epure.launcher.data.config.addFavorite
@@ -111,7 +117,7 @@ import fr.epure.launcher.ui.theme.Fonts
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-enum class SettingsPage { MAIN, WIDGETS, FAVORITES, APPEARANCE, FOLDERS, APPS, BACKUP, ABOUT }
+enum class SettingsPage { MAIN, THEMES, WIDGETS, FAVORITES, APPEARANCE, FOLDERS, APPS, BACKUP, ABOUT }
 
 /** Actions qui demandent l'activité (permissions, sélecteurs de fichiers…). */
 interface SettingsCallbacks {
@@ -129,6 +135,7 @@ interface SettingsCallbacks {
     fun notificationStatus(): NotificationModuleStatus
     fun openNotificationAccess()
     fun openNotificationModuleDetails()
+    fun applyRivageWallpaper()
 }
 
 /** Racine des réglages avec une navigation simple entre pages. */
@@ -150,7 +157,8 @@ fun SettingsApp(
     BackHandler(enabled = stack.size > 1) { back() }
 
     when (page) {
-        SettingsPage.MAIN -> MainPage(isDefaultLauncher, callbacks, navigate, onFinish)
+        SettingsPage.MAIN -> MainPage(config, isDefaultLauncher, callbacks, navigate, onFinish)
+        SettingsPage.THEMES -> ThemesPage(vm, config, callbacks, back)
         SettingsPage.WIDGETS -> WidgetsPage(vm, config, callbacks, back)
         SettingsPage.FAVORITES -> FavoritesPage(vm, config, state, back)
         SettingsPage.APPEARANCE -> AppearancePage(vm, config.appearance, callbacks, back)
@@ -163,6 +171,7 @@ fun SettingsApp(
 
 @Composable
 private fun MainPage(
+    config: LauncherConfig,
     isDefaultLauncher: Boolean,
     callbacks: SettingsCallbacks,
     navigate: (SettingsPage) -> Unit,
@@ -195,6 +204,12 @@ private fun MainPage(
                 }
             }
         }
+        SettingsItem(
+            title = stringResource(R.string.settings_themes),
+            subtitle = ThemePresets.current(config.appearance)?.name ?: stringResource(R.string.theme_custom),
+            icon = Icons.Outlined.AutoAwesome,
+            onClick = { navigate(SettingsPage.THEMES) },
+        )
         SettingsItem(stringResource(R.string.settings_widgets), stringResource(R.string.settings_widgets_sub), Icons.Outlined.Widgets, onClick = { navigate(SettingsPage.WIDGETS) })
         SettingsItem(stringResource(R.string.settings_favorites), stringResource(R.string.settings_favorites_sub), Icons.Outlined.Star, onClick = { navigate(SettingsPage.FAVORITES) })
         SettingsItem(stringResource(R.string.settings_appearance), stringResource(R.string.settings_appearance_sub), Icons.Outlined.Palette, onClick = { navigate(SettingsPage.APPEARANCE) })
@@ -202,6 +217,74 @@ private fun MainPage(
         SettingsItem(stringResource(R.string.settings_apps), stringResource(R.string.settings_apps_sub), Icons.Outlined.VisibilityOff, onClick = { navigate(SettingsPage.APPS) })
         SettingsItem(stringResource(R.string.settings_backup), stringResource(R.string.settings_backup_sub), Icons.Outlined.Backup, onClick = { navigate(SettingsPage.BACKUP) })
         SettingsItem(stringResource(R.string.settings_about), null, Icons.Outlined.Info, onClick = { navigate(SettingsPage.ABOUT) })
+    }
+}
+
+// ----- Thèmes prêts à l'emploi -----
+
+@Composable
+private fun ThemesPage(vm: SettingsViewModel, config: LauncherConfig, callbacks: SettingsCallbacks, back: () -> Unit) {
+    val current = ThemePresets.current(config.appearance)
+    var confirmWallpaper by remember { mutableStateOf(false) }
+    SettingsScaffold(title = stringResource(R.string.settings_themes), onBack = back) {
+        SettingsNote(stringResource(R.string.themes_note))
+        ThemePresets.all.forEach { preset ->
+            val active = preset.id == current?.id
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(preset.name, style = MaterialTheme.typography.titleLarge.copy(fontFamily = Fonts.family(preset.appearance.font, null)))
+                        Text(preset.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    if (active) {
+                        Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.theme_active))
+                    } else {
+                        Button(onClick = { vm.update { ThemePresets.apply(it, preset) } }) { Text(stringResource(R.string.theme_apply)) }
+                    }
+                }
+            }
+        }
+        if (current == null) SettingsNote(stringResource(R.string.theme_custom_note))
+
+        SettingsSection(stringResource(R.string.section_rivage_wallpaper))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Image(
+                painter = painterResource(R.drawable.rivage_wallpaper),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 72.dp, height = 144.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.rivage_wallpaper_text), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(onClick = { confirmWallpaper = true }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
+            }
+        }
+    }
+    if (confirmWallpaper) {
+        AlertDialog(
+            onDismissRequest = { confirmWallpaper = false },
+            title = { Text(stringResource(R.string.rivage_wallpaper_confirm_title)) },
+            text = { Text(stringResource(R.string.rivage_wallpaper_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmWallpaper = false
+                    callbacks.applyRivageWallpaper()
+                }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmWallpaper = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 
@@ -216,6 +299,12 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
 
     SettingsScaffold(title = stringResource(R.string.settings_widgets), onBack = back) {
         SettingsSection(stringResource(R.string.section_clock))
+        SettingsSwitch(
+            title = stringResource(R.string.widget_greeting),
+            subtitle = stringResource(R.string.widget_greeting_sub),
+            checked = widgets.showGreeting,
+            onChange = { v -> update { it.copy(showGreeting = v) } },
+        )
         SettingsSwitch(stringResource(R.string.widget_clock), widgets.showClock, { v -> update { it.copy(showClock = v) } })
         SettingsSwitch(stringResource(R.string.widget_date), widgets.showDate, { v -> update { it.copy(showDate = v) } })
 
@@ -487,6 +576,26 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
     fun update(transform: (Appearance) -> Appearance) = vm.update { it.updateAppearance(transform) }
 
     SettingsScaffold(title = stringResource(R.string.settings_appearance), onBack = back) {
+        SettingsSection(stringResource(R.string.section_layout))
+        SettingsChoice(
+            title = stringResource(R.string.home_style),
+            options = listOf(
+                HomeStyle.TYPOGRAPHIC to stringResource(R.string.home_style_typo),
+                HomeStyle.LIST to stringResource(R.string.home_style_list),
+            ),
+            selected = appearance.homeStyle,
+            onSelect = { v -> update { it.copy(homeStyle = v) } },
+        )
+        SettingsChoice(
+            title = stringResource(R.string.icon_style),
+            options = listOf(
+                IconStyle.LINE to stringResource(R.string.icon_style_line),
+                IconStyle.ORIGINAL to stringResource(R.string.icon_style_original),
+            ),
+            selected = appearance.iconStyle,
+            onSelect = { v -> update { it.copy(iconStyle = v) } },
+        )
+
         SettingsSection(stringResource(R.string.section_theme))
         SettingsChoice(
             title = null,
@@ -863,7 +972,7 @@ private fun AboutPage(versionName: String, callbacks: SettingsCallbacks, back: (
         )
         SettingsItem(
             title = stringResource(R.string.about_fonts),
-            subtitle = "Nunito, Outfit, Manrope, Playfair Display · SIL OFL 1.1",
+            subtitle = "Montserrat, Nunito, Outfit, Manrope, Playfair (SIL OFL) · Tabler Icons (MIT)",
             icon = Icons.Outlined.FontDownload,
             onClick = { showLicenses = true },
         )

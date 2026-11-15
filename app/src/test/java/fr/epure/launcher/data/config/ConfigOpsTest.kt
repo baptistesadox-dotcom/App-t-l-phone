@@ -107,24 +107,34 @@ class ConfigOpsTest {
     }
 
     @Test
-    fun `migration v1 vers v2 adopte le nouveau style sans ecraser les choix`() {
-        val old = LauncherConfig(schemaVersion = 1).updateAppearance {
-            it.copy(font = FontChoice.SYSTEM, iconSizeDp = 36, wallpaperDim = 0.15f)
-        }
+    fun `migration vers v3 applique le theme Rivage sans toucher aux favoris`() {
+        val old = LauncherConfig(schemaVersion = 1)
+            .addFavorite("a")
+            .createFolder("f", "Jeux", listOf("g"))
+            .updateAppearance { it.copy(font = FontChoice.SYSTEM, iconSizeDp = 36, iconPack = "pack.icones", customFontPath = "/x.ttf") }
         val migrated = old.migrated()
         assertEquals(CURRENT_SCHEMA_VERSION, migrated.schemaVersion)
-        assertEquals(FontChoice.NUNITO, migrated.appearance.font)
-        assertEquals(38, migrated.appearance.iconSizeDp)
-        assertEquals(0.1f, migrated.appearance.wallpaperDim)
-
-        // Un choix personnel (police, taille) est conservé.
-        val custom = LauncherConfig(schemaVersion = 1).updateAppearance { it.copy(font = FontChoice.SERIF, iconSizeDp = 48) }.migrated()
-        assertEquals(FontChoice.SERIF, custom.appearance.font)
-        assertEquals(48, custom.appearance.iconSizeDp)
+        assertEquals(old.home, migrated.home)
+        assertEquals(old.folders, migrated.folders)
+        assertEquals(ThemePresets.RIVAGE, ThemePresets.current(migrated.appearance))
+        // Le pack d'icônes et la police importée sont conservés pour plus tard.
+        assertEquals("pack.icones", migrated.appearance.iconPack)
+        assertEquals("/x.ttf", migrated.appearance.customFontPath)
 
         // Déjà à jour : rien ne change.
-        val current = LauncherConfig()
+        val current = LauncherConfig().updateAppearance { it.copy(font = FontChoice.SERIF) }
         assertEquals(current, current.migrated())
+    }
+
+    @Test
+    fun `themes prets a l emploi`() {
+        assertEquals(ThemePresets.RIVAGE, ThemePresets.current(LauncherConfig().appearance))
+        val epure = ThemePresets.apply(LauncherConfig(), ThemePresets.EPURE)
+        assertEquals(ThemePresets.EPURE, ThemePresets.current(epure.appearance))
+        assertEquals(IconStyle.ORIGINAL, epure.appearance.iconStyle)
+        assertEquals(HomeStyle.LIST, epure.appearance.homeStyle)
+        // Un réglage modifié à la main : plus aucun thème « tel quel ».
+        assertNull(ThemePresets.current(epure.appearance.copy(textScale = 1.3f)))
     }
 
     @Test
@@ -133,7 +143,7 @@ class ConfigOpsTest {
             .updateAppearance { it.copy(font = FontChoice.CUSTOM, customFontPath = "/data/x.ttf") }
             .sanitizedForImport()
         assertTrue(config.widgets.hosted.isEmpty())
-        assertEquals(FontChoice.NUNITO, config.appearance.font)
+        assertEquals(FontChoice.MONTSERRAT, config.appearance.font)
         assertNull(config.appearance.customFontPath)
         assertTrue(config.onboardingDone)
     }

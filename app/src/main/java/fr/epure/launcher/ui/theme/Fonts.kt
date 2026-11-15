@@ -12,13 +12,14 @@ import fr.epure.launcher.data.config.FontChoice
 import java.io.File
 
 /**
- * Polices proposées : quatre polices incluses (licence SIL OFL, voir res/raw/licence_polices.txt),
+ * Polices proposées : cinq polices incluses (licence SIL OFL, voir res/raw/licence_polices.txt),
  * celles du système, et une police importée par l'utilisateur.
  */
 object Fonts {
 
     /** Nom affiché de chaque choix de police. */
     fun label(choice: FontChoice): String = when (choice) {
+        FontChoice.MONTSERRAT -> "Géométrique (Montserrat)"
         FontChoice.NUNITO -> "Ronde (Nunito)"
         FontChoice.OUTFIT -> "Moderne (Outfit)"
         FontChoice.MANROPE -> "Nette (Manrope)"
@@ -33,6 +34,13 @@ object Fonts {
         FontChoice.CUSTOM -> "Ma police"
     }
 
+    private val montserrat = FontFamily(
+        Font(R.font.montserrat_medium, FontWeight.Normal),
+        Font(R.font.montserrat_medium, FontWeight.Medium),
+        Font(R.font.montserrat_semibold, FontWeight.SemiBold),
+        Font(R.font.montserrat_bold, FontWeight.Bold),
+        Font(R.font.montserrat_extrabold, FontWeight.ExtraBold),
+    )
     private val nunito = FontFamily(
         Font(R.font.nunito_regular, FontWeight.Normal),
         Font(R.font.nunito_medium, FontWeight.Medium),
@@ -55,6 +63,7 @@ object Fonts {
     )
 
     fun family(choice: FontChoice, customFontPath: String?): FontFamily = when (choice) {
+        FontChoice.MONTSERRAT -> montserrat
         FontChoice.NUNITO -> nunito
         FontChoice.OUTFIT -> outfit
         FontChoice.MANROPE -> manrope
