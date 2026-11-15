@@ -102,7 +102,7 @@ object SampleData {
             )
         }
 
-    /** Configuration du thème Rivage, avec les mêmes apps que la vidéo d'inspiration. */
+    /** Configuration pour l'option « accueil typographique » (mêmes apps que la vidéo d'inspiration). */
     val rivageConfig: LauncherConfig = LauncherConfig(onboardingDone = true)
         .addFavorite(key("Chrome"))
         .addFavorite(key("Instagram"))

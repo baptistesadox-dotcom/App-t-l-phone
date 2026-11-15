@@ -107,44 +107,91 @@ class ConfigOpsTest {
     }
 
     @Test
-    fun `migration vers v3 applique le theme Rivage sans toucher aux favoris`() {
-        val old = LauncherConfig(schemaVersion = 1)
+    fun `apparence par defaut Epure avec les icones au trait`() {
+        val appearance = LauncherConfig().appearance
+        assertEquals(IconStyle.LINE, appearance.iconStyle)
+        assertEquals(HomeStyle.LIST, appearance.homeStyle)
+        assertEquals(FontChoice.NUNITO, appearance.font)
+        assertEquals(ThemeMode.SYSTEM, appearance.themeMode)
+        assertTrue(appearance.dynamicColor)
+        assertEquals(HomeTextColor.AUTO, appearance.homeTextColor)
+        assertTrue(appearance.showScrollerOnHome)
+    }
+
+    @Test
+    fun `migration v3 vers v4 retour a Epure sans toucher aux favoris`() {
+        // Apparence imposée par la 0.3.0 (thème « Rivage »).
+        val rivage = Appearance(
+            themeMode = ThemeMode.DARK,
+            dynamicColor = false,
+            accentColor = 0xFFFFFFFF,
+            homeTextColor = HomeTextColor.LIGHT,
+            font = FontChoice.MONTSERRAT,
+            iconSizeDp = 28,
+            iconStyle = IconStyle.LINE,
+            homeStyle = HomeStyle.TYPOGRAPHIC,
+            wallpaperDim = 0.2f,
+            showScrollerOnHome = false,
+            iconPack = "pack.icones",
+            customFontPath = "/x.ttf",
+        )
+        val old = LauncherConfig(schemaVersion = 3, appearance = rivage)
             .addFavorite("a")
-            .createFolder("f", "Jeux", listOf("g"))
-            .updateAppearance { it.copy(font = FontChoice.SYSTEM, iconSizeDp = 36, iconPack = "pack.icones", customFontPath = "/x.ttf") }
+            .createFolder("f", "Jeux", listOf("g"), onHome = true)
+            .addTodo("t", "Pain")
         val migrated = old.migrated()
         assertEquals(CURRENT_SCHEMA_VERSION, migrated.schemaVersion)
         assertEquals(old.home, migrated.home)
         assertEquals(old.folders, migrated.folders)
-        assertEquals(ThemePresets.RIVAGE, ThemePresets.current(migrated.appearance))
-        // Le pack d'icônes et la police importée sont conservés pour plus tard.
-        assertEquals("pack.icones", migrated.appearance.iconPack)
-        assertEquals("/x.ttf", migrated.appearance.customFontPath)
+        assertEquals(old.todos, migrated.todos)
+        assertEquals(old.widgets, migrated.widgets)
+        // Pack d'icônes et police importée conservés ; tout le reste revient à Épure.
+        assertEquals(Appearance(iconPack = "pack.icones", customFontPath = "/x.ttf"), migrated.appearance)
+        assertEquals(IconStyle.LINE, migrated.appearance.iconStyle)
+        assertEquals(HomeStyle.LIST, migrated.appearance.homeStyle)
+    }
+
+    @Test
+    fun `une configuration v2 garde ses reglages d apparence`() {
+        val v2 = LauncherConfig(schemaVersion = 2)
+            .updateAppearance { it.copy(accentColor = 0xFFF28BA8, font = FontChoice.OUTFIT, iconSizeDp = 44) }
+        val migrated = v2.migrated()
+        assertEquals(CURRENT_SCHEMA_VERSION, migrated.schemaVersion)
+        assertEquals(v2.appearance, migrated.appearance)
 
         // Déjà à jour : rien ne change.
-        val current = LauncherConfig().updateAppearance { it.copy(font = FontChoice.SERIF) }
+        val current = LauncherConfig().updateAppearance { it.copy(font = FontChoice.SERIF, homeStyle = HomeStyle.TYPOGRAPHIC) }
         assertEquals(current, current.migrated())
     }
 
     @Test
-    fun `themes prets a l emploi`() {
-        assertEquals(ThemePresets.RIVAGE, ThemePresets.current(LauncherConfig().appearance))
-        val epure = ThemePresets.apply(LauncherConfig(), ThemePresets.EPURE)
-        assertEquals(ThemePresets.EPURE, ThemePresets.current(epure.appearance))
-        assertEquals(IconStyle.ORIGINAL, epure.appearance.iconStyle)
-        assertEquals(HomeStyle.LIST, epure.appearance.homeStyle)
-        // Un réglage modifié à la main : plus aucun thème « tel quel ».
-        assertNull(ThemePresets.current(epure.appearance.copy(textScale = 1.3f)))
+    fun `import sans widgets Android ni police ni image de l appareil d origine`() {
+        val config = base.addHostedWidget(7, 120)
+            .updateAppearance { it.copy(font = FontChoice.CUSTOM, customFontPath = "/data/x.ttf") }
+            .withHomeImage("/data/accueil/image.jpg", 12)
+            .sanitizedForImport()
+        assertTrue(config.widgets.hosted.isEmpty())
+        assertEquals(FontChoice.NUNITO, config.appearance.font)
+        assertNull(config.appearance.customFontPath)
+        assertNull(config.appearance.homeImagePath)
+        assertNull(config.appearance.homeImageWallpaperId)
+        assertTrue(config.onboardingDone)
     }
 
     @Test
-    fun `import sans widgets Android ni police importee`() {
-        val config = base.addHostedWidget(7, 120)
-            .updateAppearance { it.copy(font = FontChoice.CUSTOM, customFontPath = "/data/x.ttf") }
-            .sanitizedForImport()
-        assertTrue(config.widgets.hosted.isEmpty())
-        assertEquals(FontChoice.MONTSERRAT, config.appearance.font)
-        assertNull(config.appearance.customFontPath)
-        assertTrue(config.onboardingDone)
+    fun `l image de l accueil s efface quand un autre fond d ecran est choisi`() {
+        val withImage = base.withHomeImage("/img.jpg", 41)
+        assertEquals("/img.jpg", withImage.appearance.homeImagePath)
+        // Même fond d'écran : rien ne change.
+        assertEquals(withImage, withImage.afterSystemWallpaperChange(41))
+        // Nouveau fond choisi ailleurs : on le laisse voir.
+        val changed = withImage.afterSystemWallpaperChange(42)
+        assertNull(changed.appearance.homeImagePath)
+        assertNull(changed.appearance.homeImageWallpaperId)
+        // Identifiant inconnu (téléphone qui ne le donne pas) : l'image reste.
+        val unknown = base.withHomeImage("/img.jpg", null)
+        assertEquals(unknown, unknown.afterSystemWallpaperChange(42))
+        // Sans image, rien à faire.
+        assertEquals(base, base.afterSystemWallpaperChange(42))
     }
 }

@@ -23,8 +23,8 @@ android {
         applicationId = "fr.epure.launcher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.0"
+        versionCode = 5
+        versionName = "0.4.0"
     }
 
     signingConfigs {
@@ -115,4 +115,9 @@ tasks.withType<Test>().configureEach {
     // Rendu fidèle des ombres et des flous dans les captures d'écran.
     systemProperty("robolectric.pixelCopyRenderMode", "hardware")
     maxHeapSize = "3g"
+    // Aperçu de l'effet parallaxe avec une autre image (voir ScreenshotTest.parallaxe) :
+    // -Pepure.demo.image=/chemin/image.jpg -Pepure.demo.out=/chemin/dossier
+    listOf("epure.demo.image", "epure.demo.out").forEach { key ->
+        providers.gradleProperty(key).orNull?.let { systemProperty(key, it) }
+    }
 }

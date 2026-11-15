@@ -39,6 +39,7 @@ val AccentPalette: List<Long> = listOf(
     0xFFF28BA8, // rose
     0xFFC3A6FF, // lavande
     0xFFE6E1D8, // ivoire
+    0xFFFFFFFF, // blanc
 )
 
 /** Réglages visuels propres au launcher, accessibles partout dans l'interface. */
@@ -55,7 +56,7 @@ data class LauncherLook(
     val scrollerSide: ScrollerSide,
     val showScrollerOnHome: Boolean,
     val isDark: Boolean,
-    val iconStyle: IconStyle = IconStyle.ORIGINAL,
+    val iconStyle: IconStyle = IconStyle.LINE,
     val homeStyle: HomeStyle = HomeStyle.LIST,
 ) {
     /** Style d'un texte posé sur le fond d'écran (avec une ombre légère si le texte est clair). */

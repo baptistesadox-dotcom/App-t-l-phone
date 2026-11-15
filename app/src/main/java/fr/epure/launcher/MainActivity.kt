@@ -25,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.luminance
@@ -37,7 +38,9 @@ import fr.epure.launcher.data.calendar.AgendaEvent
 import fr.epure.launcher.data.config.HostedWidget
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.addHostedWidget
+import fr.epure.launcher.data.config.afterSystemWallpaperChange
 import fr.epure.launcher.data.config.removeHostedWidget
+import fr.epure.launcher.data.wallpaper.HomeImage
 import fr.epure.shared.NotificationPreview
 import fr.epure.launcher.ui.AppEntry
 import fr.epure.launcher.ui.LauncherActions
@@ -48,14 +51,17 @@ import fr.epure.launcher.ui.common.LocalIconProvider
 import fr.epure.launcher.ui.common.LoaderIconProvider
 import fr.epure.launcher.ui.theme.LauncherTheme
 import fr.epure.launcher.ui.theme.LocalLauncherLook
+import fr.epure.launcher.ui.wallpaper.ParallaxWallpaper
 import fr.epure.launcher.ui.widgets.HostedWidgetFrame
 import fr.epure.launcher.ui.widgets.rememberNow
 import fr.epure.launcher.widgets.LauncherWidgetHost
 import fr.epure.launcher.widgets.WidgetProviderEntry
 import fr.epure.launcher.widgets.WidgetProviders
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** L'écran d'accueil (activité « HOME »). */
 class MainActivity : ComponentActivity() {
@@ -113,11 +119,18 @@ class MainActivity : ComponentActivity() {
 
             val currentConfig = config ?: return@setContent
             val currentState = state ?: return@setContent
-            val iconPack = currentConfig.appearance.iconPack
+            val appearance = currentConfig.appearance
+            val iconPack = appearance.iconPack
             val iconProvider = remember(iconPack, iconGeneration) { LoaderIconProvider(container.iconLoader, iconPack) }
             val now = rememberNow()
+            // Image de l'accueil choisie dans Épure (sinon, le fond d'écran du téléphone).
+            val homeImagePath = appearance.homeImagePath
+            val homeImage by produceState<HomeImage?>(initialValue = null, homeImagePath) {
+                value = homeImagePath?.let { path -> withContext(Dispatchers.IO) { container.homeImages.load(path) } }
+            }
+            val image = homeImage
 
-            LauncherTheme(appearance = currentConfig.appearance, wallpaperPrefersDarkText = darkText) {
+            LauncherTheme(appearance = appearance, wallpaperPrefersDarkText = image?.prefersDarkText ?: darkText) {
                 val look = LocalLauncherLook.current
                 val view = LocalView.current
                 // Icônes de la barre d'état lisibles sur le fond (accueil) ou sur la liste.
@@ -150,6 +163,14 @@ class MainActivity : ComponentActivity() {
                             )
                         },
                         onConfigureWeather = { openSettings(SettingsActivity.PAGE_WIDGETS) },
+                        wallpaper = {
+                            if (image != null) {
+                                ParallaxWallpaper(
+                                    image = image.bitmap,
+                                    strength = if (appearance.parallax) appearance.parallaxStrength else 0f,
+                                )
+                            }
+                        },
                     )
                 }
             }
@@ -165,6 +186,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.onHomeVisible()
+        checkSystemWallpaper()
     }
 
     override fun onStop() {
@@ -216,10 +238,24 @@ class MainActivity : ComponentActivity() {
         val manager = WallpaperManager.getInstance(this)
         updateWallpaperHint(runCatching { manager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }.getOrNull())
         val listener = WallpaperManager.OnColorsChangedListener { colors, which ->
-            if (which and WallpaperManager.FLAG_SYSTEM != 0) updateWallpaperHint(colors)
+            if (which and WallpaperManager.FLAG_SYSTEM != 0) {
+                updateWallpaperHint(colors)
+                checkSystemWallpaper()
+            }
         }
         runCatching { manager.addOnColorsChangedListener(listener, Handler(Looper.getMainLooper())) }
             .onSuccess { colorsListener = listener }
+    }
+
+    /**
+     * Un nouveau fond d'écran a été choisi ailleurs (galerie, réglages Android) : l'image
+     * de l'accueil s'efface pour le laisser voir.
+     */
+    private fun checkSystemWallpaper() {
+        val images = container.homeImages
+        if (images.isApplyingSystemWallpaper) return
+        val id = images.systemWallpaperId() ?: return
+        viewModel.updateConfig { it.afterSystemWallpaperChange(id) }
     }
 
     private fun updateWallpaperHint(colors: WallpaperColors?) {

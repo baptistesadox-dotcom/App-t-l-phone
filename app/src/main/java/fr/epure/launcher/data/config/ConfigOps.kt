@@ -183,12 +183,33 @@ fun LauncherConfig.moveHostedWidget(appWidgetId: Int, delta: Int): LauncherConfi
 fun LauncherConfig.updateAppearance(transform: (Appearance) -> Appearance): LauncherConfig =
     copy(appearance = transform(appearance))
 
+/** Choisit l'image de l'accueil (ou la retire avec null). */
+fun LauncherConfig.withHomeImage(path: String?, systemWallpaperId: Int?): LauncherConfig =
+    updateAppearance { it.copy(homeImagePath = path, homeImageWallpaperId = if (path == null) null else systemWallpaperId) }
+
+/**
+ * Le fond d'écran du téléphone a peut-être changé : si un autre fond a été choisi depuis
+ * l'image de l'accueil, on retire celle-ci pour laisser voir le nouveau fond.
+ */
+fun LauncherConfig.afterSystemWallpaperChange(currentWallpaperId: Int): LauncherConfig {
+    val known = appearance.homeImageWallpaperId
+    return if (appearance.homeImagePath != null && known != null && known != currentWallpaperId) {
+        withHomeImage(null, null)
+    } else {
+        this
+    }
+}
+
 // ----- Migrations -----
 
 /**
  * Met à jour une configuration créée par une version précédente.
  * v1 → v2 (0.2.0) : nouvelle police et proportions par défaut, si l'utilisateur
  * n'avait pas changé celles d'origine.
+ * v3 → v4 (0.4.0) : la 0.3.0 imposait le thème « Rivage » ; on revient à l'apparence
+ * Épure, avec les icônes au trait. Favoris, dossiers et widgets ne changent pas.
+ * (Une configuration v1 ou v2 garde ses réglages : les nouveaux champs prennent
+ * simplement leur valeur par défaut, dont les icônes au trait.)
  */
 fun LauncherConfig.migrated(): LauncherConfig {
     var config = this
@@ -201,9 +222,10 @@ fun LauncherConfig.migrated(): LauncherConfig {
             )
         }
     }
-    if (config.schemaVersion < 3) {
-        // 0.3.0 : le thème « Rivage » devient l'apparence par défaut (favoris et dossiers inchangés).
-        config = ThemePresets.apply(config, ThemePresets.RIVAGE)
+    if (config.schemaVersion == 3) {
+        config = config.updateAppearance {
+            Appearance(customFontPath = it.customFontPath, iconPack = it.iconPack)
+        }
     }
     return if (config.schemaVersion == CURRENT_SCHEMA_VERSION) config else config.copy(schemaVersion = CURRENT_SCHEMA_VERSION)
 }
@@ -211,13 +233,14 @@ fun LauncherConfig.migrated(): LauncherConfig {
 // ----- Import / export -----
 
 /**
- * Prépare une configuration importée depuis une sauvegarde : les widgets Android
- * sont liés à l'appareil d'origine et ne peuvent pas être restaurés.
+ * Prépare une configuration importée depuis une sauvegarde : les widgets Android, la
+ * police importée et l'image de l'accueil sont liés à l'appareil d'origine et ne peuvent
+ * pas être restaurés.
  */
 fun LauncherConfig.sanitizedForImport(): LauncherConfig = copy(
     onboardingDone = true,
     widgets = widgets.copy(hosted = emptyList()),
-    appearance = appearance.copy(customFontPath = null).let {
-        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.MONTSERRAT) else it
+    appearance = appearance.copy(customFontPath = null, homeImagePath = null, homeImageWallpaperId = null).let {
+        if (it.font == FontChoice.CUSTOM) it.copy(font = FontChoice.NUNITO) else it
     },
 )

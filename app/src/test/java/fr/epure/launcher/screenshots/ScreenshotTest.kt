@@ -1,16 +1,22 @@
 package fr.epure.launcher.screenshots
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -20,10 +26,10 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import fr.epure.launcher.R
 import fr.epure.launcher.data.config.Appearance
 import fr.epure.launcher.data.config.FontChoice
-import fr.epure.launcher.data.config.IconStyle
+import fr.epure.launcher.data.config.HomeStyle
+import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.ThemeMode
-import fr.epure.launcher.data.config.ThemePresets
 import fr.epure.launcher.data.config.updateWidgets
 import fr.epure.launcher.ui.AppMenuOrigin
 import fr.epure.launcher.ui.AppMenuRequest
@@ -35,6 +41,7 @@ import fr.epure.launcher.ui.SampleData
 import fr.epure.launcher.ui.buildDrawerList
 import fr.epure.launcher.ui.buildLauncherState
 import fr.epure.launcher.ui.theme.LauncherTheme
+import fr.epure.launcher.ui.wallpaper.ParallaxWallpaper
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,6 +49,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Captures d'écran du launcher, générées sans téléphone (Robolectric).
@@ -56,10 +66,21 @@ class ScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val rivage = ThemePresets.RIVAGE.appearance
-    private val epure = ThemePresets.EPURE.appearance.copy(themeMode = ThemeMode.DARK, dynamicColor = false)
+    /** Apparence par défaut (Épure, icônes au trait), en sombre : pas de Material You sans téléphone. */
+    private val epure = Appearance().copy(themeMode = ThemeMode.DARK, dynamicColor = false)
 
-    /** Fond d'écran : celui du thème Rivage, ou un faux fond sombre abstrait. */
+    /** Option « accueil typographique » avec les réglages qui vont avec (police, blanc, texte clair). */
+    private val typographic = epure.copy(
+        homeStyle = HomeStyle.TYPOGRAPHIC,
+        font = FontChoice.MONTSERRAT,
+        accentColor = 0xFFFFFFFF,
+        homeTextColor = HomeTextColor.LIGHT,
+        iconSizeDp = 28,
+        wallpaperDim = 0.2f,
+        showScrollerOnHome = false,
+    )
+
+    /** Fond d'écran : le fond « Rivage » fourni avec l'app, ou un faux fond sombre abstrait. */
     @Composable
     private fun Wallpaper(shore: Boolean, content: @Composable () -> Unit) {
         Box(
@@ -104,8 +125,9 @@ class ScreenshotTest {
 
     private fun render(
         ui: LauncherUiController = LauncherUiController(),
-        appearance: Appearance = rivage,
-        config: LauncherConfig = SampleData.rivageConfig,
+        appearance: Appearance = epure,
+        config: LauncherConfig = SampleData.config.updateWidgets { it.copy(showTodo = false, showAgenda = false) },
+        shore: Boolean = false,
         query: String = "",
         tab: String? = null,
         scrollerItem: String? = null,
@@ -115,7 +137,7 @@ class ScreenshotTest {
         val source = tab?.let { id -> state.folderById(id)?.apps } ?: state.apps
         compose.setContent {
             LauncherTheme(appearance = appearance) {
-                Wallpaper(shore = appearance.iconStyle == IconStyle.LINE) {
+                Wallpaper(shore = shore) {
                     LauncherScreen(
                         state = state,
                         drawer = buildDrawerList(source, query),
@@ -138,73 +160,115 @@ class ScreenshotTest {
         compose.waitForIdle()
     }
 
-    // ----- Thème Rivage (par défaut) -----
+    // ----- Apparence par défaut : Épure avec les icônes au trait -----
 
     @Test
-    fun rivageAccueil() {
-        render()
-        compose.onRoot().captureRoboImage("../docs/screenshots/1-rivage-accueil.png")
+    fun accueil() {
+        render(withNotifications = true)
+        compose.onRoot().captureRoboImage("../docs/screenshots/1-accueil.png")
     }
 
     @Test
-    fun rivageListe() {
+    fun notificationsDepliees() {
+        val ui = LauncherUiController().apply { expandedNotifications = SampleData.key("WhatsApp") }
+        render(ui = ui, withNotifications = true)
+        compose.onRoot().captureRoboImage("../docs/screenshots/2-notifications.png")
+    }
+
+    @Test
+    fun widgetsEtDossier() {
+        render(
+            ui = LauncherUiController().apply { expandedFolderId = "social" },
+            config = SampleData.config,
+            withNotifications = true,
+        )
+        compose.onRoot().captureRoboImage("../docs/screenshots/3-widgets-dossier.png")
+    }
+
+    @Test
+    fun listeEtAlphabet() {
         val ui = LauncherUiController(drawerInitiallyOpen = true).apply {
             scrollerLetter = "M"
             scrollerY = 1000f
         }
         render(ui = ui, scrollerItem = "M")
-        compose.onRoot().captureRoboImage("../docs/screenshots/2-rivage-liste.png")
+        compose.onRoot().captureRoboImage("../docs/screenshots/4-liste-alphabet.png")
     }
 
     @Test
-    fun rivageOnglet() {
+    fun ongletDeDossier() {
         render(ui = LauncherUiController(drawerInitiallyOpen = true), tab = "travail")
-        compose.onRoot().captureRoboImage("../docs/screenshots/3-rivage-onglet.png")
-    }
-
-    // ----- Thème Épure -----
-
-    @Test
-    fun epureAccueil() {
-        render(
-            appearance = epure,
-            config = SampleData.config.updateWidgets { it.copy(showTodo = false, showAgenda = false) },
-            withNotifications = true,
-        )
-        compose.onRoot().captureRoboImage("../docs/screenshots/4-epure-accueil.png")
-    }
-
-    @Test
-    fun epureNotificationsDepliees() {
-        val ui = LauncherUiController().apply { expandedNotifications = SampleData.key("WhatsApp") }
-        render(
-            ui = ui,
-            appearance = epure,
-            config = SampleData.config.updateWidgets { it.copy(showTodo = false, showAgenda = false) },
-            withNotifications = true,
-        )
-        compose.onRoot().captureRoboImage("../docs/screenshots/5-epure-notifications.png")
-    }
-
-    @Test
-    fun epureWidgetsEtDossier() {
-        render(
-            ui = LauncherUiController().apply { expandedFolderId = "social" },
-            appearance = epure,
-            config = SampleData.config,
-            withNotifications = true,
-        )
-        compose.onRoot().captureRoboImage("../docs/screenshots/6-epure-widgets-dossier.png")
+        compose.onRoot().captureRoboImage("../docs/screenshots/5-onglet-dossier.png")
     }
 
     @OptIn(ExperimentalRoborazziApi::class)
     @Test
     fun menuDUneApp() {
         val ui = LauncherUiController()
-        val instagram = state(SampleData.rivageConfig).apps.first { it.label == "Instagram" }
+        val instagram = state(SampleData.config).apps.first { it.label == "Instagram" }
         ui.appMenu = AppMenuRequest(instagram, AppMenuOrigin.Home)
         render(ui = ui)
-        captureScreenRoboImage("../docs/screenshots/7-menu-app.png")
+        captureScreenRoboImage("../docs/screenshots/6-menu-app.png")
+    }
+
+    // ----- Options, une par une -----
+
+    /** Accueil typographique, police Montserrat, accent blanc, fond d'écran Rivage. */
+    @Test
+    fun optionTypographique() {
+        render(appearance = typographic, config = SampleData.rivageConfig, shore = true)
+        compose.onRoot().captureRoboImage("../docs/screenshots/7-option-typographique.png")
+    }
+
+    /**
+     * Effet parallaxe : l'image de l'accueil (fond Rivage) décalée comme quand on incline le
+     * téléphone, puis une série d'images pour l'animation (app/build/parallaxe/, assemblée
+     * par tools/make_parallax_gif.py). Avec -Pepure.demo.image=… et -Pepure.demo.out=…,
+     * l'aperçu se fait avec n'importe quelle image.
+     */
+    @Test
+    fun parallaxe() {
+        val demoImage = System.getProperty("epure.demo.image")
+        val outDir = System.getProperty("epure.demo.out") ?: "build/parallaxe"
+        val shift = mutableStateOf(Offset(-1f, -0.6f))
+        val appearance = epure.copy(homeTextColor = HomeTextColor.LIGHT)
+        val config = SampleData.config.updateWidgets { it.copy(showTodo = false, showAgenda = false) }
+        val state = state(config.copy(appearance = appearance))
+        compose.setContent {
+            val resource = ImageBitmap.imageResource(R.drawable.rivage_wallpaper)
+            val image = remember(demoImage) { demoImage?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() } ?: resource }
+            LauncherTheme(appearance = appearance) {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    LauncherScreen(
+                        state = state,
+                        drawer = buildDrawerList(state.apps, ""),
+                        query = "",
+                        selectedTab = null,
+                        weather = SampleData.weather,
+                        agenda = SampleData.agenda,
+                        notifications = SampleData.notifications,
+                        now = SampleData.now,
+                        use24Hour = true,
+                        actions = NoOpActions(),
+                        ui = LauncherUiController(),
+                        hostedWidget = {},
+                        onConfigureWeather = {},
+                        wallpaper = {
+                            ParallaxWallpaper(image = image, strength = appearance.parallaxStrength, previewShift = shift.value)
+                        },
+                    )
+                }
+            }
+        }
+        compose.waitForIdle()
+        if (demoImage == null) compose.onRoot().captureRoboImage("../docs/screenshots/9-parallaxe.png")
+        // Le téléphone décrit une ellipse : un tour en 24 images.
+        repeat(24) { i ->
+            val angle = 2 * PI * i / 24
+            shift.value = Offset(cos(angle).toFloat(), 0.6f * sin(angle).toFloat())
+            compose.waitForIdle()
+            compose.onRoot().captureRoboImage("$outDir/frame-${i.toString().padStart(2, '0')}.png")
+        }
     }
 
     @Test

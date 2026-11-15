@@ -89,6 +89,8 @@ fun LauncherScreen(
     listState: LazyListState = rememberLazyListState(),
     /** Lettre affichée comme touchée (captures d'écran de test uniquement). */
     previewScrollerItem: String? = null,
+    /** Image de l'accueil dessinée par Épure (effet parallaxe), sous tout le reste. */
+    wallpaper: @Composable () -> Unit = {},
 ) {
     val look = LocalLauncherLook.current
     val density = LocalDensity.current
@@ -152,6 +154,8 @@ fun LauncherScreen(
     // Les icônes au trait prennent la couleur du texte posé sur le fond d'écran.
     CompositionLocalProvider(LocalContentColor provides look.onWallpaper) {
     Box(Modifier.fillMaxSize()) {
+        wallpaper()
+
         // Voile sur le fond d'écran : léger sur l'accueil, plus marqué derrière la liste.
         Box(
             Modifier

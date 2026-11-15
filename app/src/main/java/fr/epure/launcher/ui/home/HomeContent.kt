@@ -466,7 +466,7 @@ internal fun HomeFolder(
 fun FolderIcon(folder: FolderEntry, size: Dp, modifier: Modifier = Modifier) {
     val look = LocalLauncherLook.current
     if (look.iconStyle == IconStyle.LINE) {
-        LineIcons.vector("folder")?.let { vector ->
+        LineIcons.vector("folder", size)?.let { vector ->
             Icon(imageVector = vector, contentDescription = null, tint = LocalContentColor.current, modifier = modifier.size(size))
             return
         }

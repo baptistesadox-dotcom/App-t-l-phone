@@ -1,7 +1,6 @@
 package fr.epure.launcher
 
 import android.Manifest
-import android.app.WallpaperManager
 import android.appwidget.AppWidgetHost
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,9 +43,7 @@ import fr.epure.launcher.ui.settings.SettingsViewModel
 import fr.epure.launcher.ui.theme.LauncherTheme
 import fr.epure.launcher.ui.theme.LocalLauncherLook
 import fr.epure.launcher.widgets.LauncherWidgetHost
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 /** Réglages d'Épure. C'est aussi l'icône affichée dans la liste des apps. */
@@ -54,6 +52,20 @@ class SettingsActivity : ComponentActivity() {
     private val viewModel: SettingsViewModel by viewModels()
     private val isDefaultLauncher = mutableStateOf(false)
     private val pendingImport = mutableStateOf<LauncherConfig?>(null)
+
+    /** Vrai juste après le choix d'une image de l'accueil : proposer l'écran verrouillé. */
+    private val askSystemWallpaper = mutableStateOf(false)
+
+    private val pickHomeImage = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        lifecycleScope.launch {
+            if (viewModel.importHomeImage(uri)) {
+                askSystemWallpaper.value = true
+            } else {
+                Toast.makeText(this@SettingsActivity, R.string.home_image_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     private val calendarPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) Toast.makeText(this, R.string.agenda_permission_denied, Toast.LENGTH_LONG).show()
@@ -133,6 +145,24 @@ class SettingsActivity : ComponentActivity() {
                             versionName = versionName,
                             callbacks = callbacks,
                             onFinish = ::finish,
+                        )
+                    }
+                    if (askSystemWallpaper.value) {
+                        AlertDialog(
+                            onDismissRequest = { askSystemWallpaper.value = false },
+                            title = { Text(stringResource(R.string.home_image_system_title)) },
+                            text = { Text(stringResource(R.string.home_image_system_text)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    askSystemWallpaper.value = false
+                                    callbacks.applyHomeImageToSystem()
+                                }) { Text(stringResource(R.string.home_image_system_yes)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { askSystemWallpaper.value = false }) {
+                                    Text(stringResource(R.string.home_image_system_no))
+                                }
+                            },
                         )
                     }
                     pendingImport.value?.let { imported ->
@@ -219,15 +249,27 @@ class SettingsActivity : ComponentActivity() {
 
         override fun applyRivageWallpaper() {
             lifecycleScope.launch {
-                val ok = withContext(Dispatchers.IO) {
-                    runCatching {
-                        val manager = WallpaperManager.getInstance(this@SettingsActivity)
-                        manager.setResource(R.drawable.rivage_wallpaper, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
-                    }.isSuccess
-                }
+                val ok = viewModel.useRivageWallpaper()
                 Toast.makeText(
                     this@SettingsActivity,
-                    if (ok) R.string.rivage_wallpaper_done else R.string.rivage_wallpaper_failed,
+                    if (ok) R.string.wallpaper_applied else R.string.wallpaper_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+
+        override fun pickHomeImage() {
+            runCatching {
+                pickHomeImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }.onFailure { showMessage(getString(R.string.error_no_app)) }
+        }
+
+        override fun applyHomeImageToSystem() {
+            lifecycleScope.launch {
+                val ok = viewModel.applyHomeImageToSystem()
+                Toast.makeText(
+                    this@SettingsActivity,
+                    if (ok) R.string.wallpaper_applied else R.string.wallpaper_failed,
                     Toast.LENGTH_SHORT,
                 ).show()
             }

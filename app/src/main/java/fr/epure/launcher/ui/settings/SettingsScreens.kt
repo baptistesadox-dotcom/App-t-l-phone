@@ -1,6 +1,7 @@
 package fr.epure.launcher.ui.settings
 
 import android.appwidget.AppWidgetManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -35,10 +36,12 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Star
@@ -72,6 +75,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -90,7 +95,6 @@ import fr.epure.launcher.data.config.HomeTextColor
 import fr.epure.launcher.data.config.LauncherConfig
 import fr.epure.launcher.data.config.ScrollerSide
 import fr.epure.launcher.data.config.ThemeMode
-import fr.epure.launcher.data.config.ThemePresets
 import fr.epure.launcher.data.config.WeatherLocation
 import fr.epure.launcher.data.config.WidgetsConfig
 import fr.epure.launcher.data.config.addFavorite
@@ -114,10 +118,13 @@ import fr.epure.launcher.ui.sheets.FolderEditorDialog
 import fr.epure.launcher.ui.sheets.FullScreenDialog
 import fr.epure.launcher.ui.theme.AccentPalette
 import fr.epure.launcher.ui.theme.Fonts
+import fr.epure.launcher.ui.wallpaper.TiltSensor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-enum class SettingsPage { MAIN, THEMES, WIDGETS, FAVORITES, APPEARANCE, FOLDERS, APPS, BACKUP, ABOUT }
+enum class SettingsPage { MAIN, WIDGETS, FAVORITES, APPEARANCE, FOLDERS, APPS, BACKUP, ABOUT }
 
 /** Actions qui demandent l'activité (permissions, sélecteurs de fichiers…). */
 interface SettingsCallbacks {
@@ -136,6 +143,8 @@ interface SettingsCallbacks {
     fun openNotificationAccess()
     fun openNotificationModuleDetails()
     fun applyRivageWallpaper()
+    fun pickHomeImage()
+    fun applyHomeImageToSystem()
 }
 
 /** Racine des réglages avec une navigation simple entre pages. */
@@ -151,17 +160,17 @@ fun SettingsApp(
     onFinish: () -> Unit,
 ) {
     var stack by rememberSaveable { mutableStateOf(listOf(startPage.name)) }
-    val page = SettingsPage.valueOf(stack.last())
+    // Une page disparue d'une ancienne version (ex. « Thème ») ramène à l'accueil des réglages.
+    val page = SettingsPage.entries.firstOrNull { it.name == stack.last() } ?: SettingsPage.MAIN
     val navigate: (SettingsPage) -> Unit = { stack = stack + it.name }
     val back: () -> Unit = { if (stack.size > 1) stack = stack.dropLast(1) else onFinish() }
     BackHandler(enabled = stack.size > 1) { back() }
 
     when (page) {
-        SettingsPage.MAIN -> MainPage(config, isDefaultLauncher, callbacks, navigate, onFinish)
-        SettingsPage.THEMES -> ThemesPage(vm, config, callbacks, back)
+        SettingsPage.MAIN -> MainPage(isDefaultLauncher, callbacks, navigate, onFinish)
         SettingsPage.WIDGETS -> WidgetsPage(vm, config, callbacks, back)
         SettingsPage.FAVORITES -> FavoritesPage(vm, config, state, back)
-        SettingsPage.APPEARANCE -> AppearancePage(vm, config.appearance, callbacks, back)
+        SettingsPage.APPEARANCE -> AppearancePage(vm, config, callbacks, back)
         SettingsPage.FOLDERS -> FoldersPage(vm, state, callbacks, back)
         SettingsPage.APPS -> AppsPage(vm, state, back)
         SettingsPage.BACKUP -> BackupPage(callbacks, back)
@@ -171,7 +180,6 @@ fun SettingsApp(
 
 @Composable
 private fun MainPage(
-    config: LauncherConfig,
     isDefaultLauncher: Boolean,
     callbacks: SettingsCallbacks,
     navigate: (SettingsPage) -> Unit,
@@ -204,12 +212,6 @@ private fun MainPage(
                 }
             }
         }
-        SettingsItem(
-            title = stringResource(R.string.settings_themes),
-            subtitle = ThemePresets.current(config.appearance)?.name ?: stringResource(R.string.theme_custom),
-            icon = Icons.Outlined.AutoAwesome,
-            onClick = { navigate(SettingsPage.THEMES) },
-        )
         SettingsItem(stringResource(R.string.settings_widgets), stringResource(R.string.settings_widgets_sub), Icons.Outlined.Widgets, onClick = { navigate(SettingsPage.WIDGETS) })
         SettingsItem(stringResource(R.string.settings_favorites), stringResource(R.string.settings_favorites_sub), Icons.Outlined.Star, onClick = { navigate(SettingsPage.FAVORITES) })
         SettingsItem(stringResource(R.string.settings_appearance), stringResource(R.string.settings_appearance_sub), Icons.Outlined.Palette, onClick = { navigate(SettingsPage.APPEARANCE) })
@@ -217,74 +219,6 @@ private fun MainPage(
         SettingsItem(stringResource(R.string.settings_apps), stringResource(R.string.settings_apps_sub), Icons.Outlined.VisibilityOff, onClick = { navigate(SettingsPage.APPS) })
         SettingsItem(stringResource(R.string.settings_backup), stringResource(R.string.settings_backup_sub), Icons.Outlined.Backup, onClick = { navigate(SettingsPage.BACKUP) })
         SettingsItem(stringResource(R.string.settings_about), null, Icons.Outlined.Info, onClick = { navigate(SettingsPage.ABOUT) })
-    }
-}
-
-// ----- Thèmes prêts à l'emploi -----
-
-@Composable
-private fun ThemesPage(vm: SettingsViewModel, config: LauncherConfig, callbacks: SettingsCallbacks, back: () -> Unit) {
-    val current = ThemePresets.current(config.appearance)
-    var confirmWallpaper by remember { mutableStateOf(false) }
-    SettingsScaffold(title = stringResource(R.string.settings_themes), onBack = back) {
-        SettingsNote(stringResource(R.string.themes_note))
-        ThemePresets.all.forEach { preset ->
-            val active = preset.id == current?.id
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(preset.name, style = MaterialTheme.typography.titleLarge.copy(fontFamily = Fonts.family(preset.appearance.font, null)))
-                        Text(preset.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    if (active) {
-                        Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.theme_active))
-                    } else {
-                        Button(onClick = { vm.update { ThemePresets.apply(it, preset) } }) { Text(stringResource(R.string.theme_apply)) }
-                    }
-                }
-            }
-        }
-        if (current == null) SettingsNote(stringResource(R.string.theme_custom_note))
-
-        SettingsSection(stringResource(R.string.section_rivage_wallpaper))
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
-            Image(
-                painter = painterResource(R.drawable.rivage_wallpaper),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(width = 72.dp, height = 144.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-            )
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.rivage_wallpaper_text), style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(onClick = { confirmWallpaper = true }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
-            }
-        }
-    }
-    if (confirmWallpaper) {
-        AlertDialog(
-            onDismissRequest = { confirmWallpaper = false },
-            title = { Text(stringResource(R.string.rivage_wallpaper_confirm_title)) },
-            text = { Text(stringResource(R.string.rivage_wallpaper_confirm_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmWallpaper = false
-                    callbacks.applyRivageWallpaper()
-                }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
-            },
-            dismissButton = { TextButton(onClick = { confirmWallpaper = false }) { Text(stringResource(R.string.action_cancel)) } },
-        )
     }
 }
 
@@ -299,12 +233,6 @@ private fun WidgetsPage(vm: SettingsViewModel, config: LauncherConfig, callbacks
 
     SettingsScaffold(title = stringResource(R.string.settings_widgets), onBack = back) {
         SettingsSection(stringResource(R.string.section_clock))
-        SettingsSwitch(
-            title = stringResource(R.string.widget_greeting),
-            subtitle = stringResource(R.string.widget_greeting_sub),
-            checked = widgets.showGreeting,
-            onChange = { v -> update { it.copy(showGreeting = v) } },
-        )
         SettingsSwitch(stringResource(R.string.widget_clock), widgets.showClock, { v -> update { it.copy(showClock = v) } })
         SettingsSwitch(stringResource(R.string.widget_date), widgets.showDate, { v -> update { it.copy(showDate = v) } })
 
@@ -571,21 +499,41 @@ private fun FavoritesPage(vm: SettingsViewModel, config: LauncherConfig, state: 
 // ----- Apparence -----
 
 @Composable
-private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callbacks: SettingsCallbacks, back: () -> Unit) {
+private fun AppearancePage(vm: SettingsViewModel, config: LauncherConfig, callbacks: SettingsCallbacks, back: () -> Unit) {
+    val appearance = config.appearance
+    val context = LocalContext.current
     var choosingPack by remember { mutableStateOf(false) }
+    var confirmWallpaper by remember { mutableStateOf(false) }
     fun update(transform: (Appearance) -> Appearance) = vm.update { it.updateAppearance(transform) }
 
     SettingsScaffold(title = stringResource(R.string.settings_appearance), onBack = back) {
+        SettingsNote(stringResource(R.string.appearance_note))
+
         SettingsSection(stringResource(R.string.section_layout))
         SettingsChoice(
-            title = stringResource(R.string.home_style),
+            title = null,
             options = listOf(
-                HomeStyle.TYPOGRAPHIC to stringResource(R.string.home_style_typo),
                 HomeStyle.LIST to stringResource(R.string.home_style_list),
+                HomeStyle.TYPOGRAPHIC to stringResource(R.string.home_style_typo),
             ),
             selected = appearance.homeStyle,
             onSelect = { v -> update { it.copy(homeStyle = v) } },
         )
+        SettingsNote(
+            stringResource(
+                if (appearance.homeStyle == HomeStyle.TYPOGRAPHIC) R.string.home_style_typo_sub else R.string.home_style_list_sub,
+            ),
+        )
+        if (appearance.homeStyle == HomeStyle.TYPOGRAPHIC) {
+            SettingsSwitch(
+                title = stringResource(R.string.widget_greeting),
+                subtitle = stringResource(R.string.widget_greeting_sub),
+                checked = config.widgets.showGreeting,
+                onChange = { v -> vm.update { c -> c.updateWidgets { it.copy(showGreeting = v) } } },
+            )
+        }
+
+        SettingsSection(stringResource(R.string.section_icons))
         SettingsChoice(
             title = stringResource(R.string.icon_style),
             options = listOf(
@@ -594,6 +542,116 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
             ),
             selected = appearance.iconStyle,
             onSelect = { v -> update { it.copy(iconStyle = v) } },
+        )
+        SettingsSwitch(stringResource(R.string.show_icons), appearance.showIcons, { v -> update { it.copy(showIcons = v) } })
+        if (appearance.showIcons) {
+            SettingsSlider(
+                title = stringResource(R.string.icon_size),
+                value = appearance.iconSizeDp.toFloat(),
+                range = 24f..56f,
+                steps = 7,
+                valueLabel = { "${it.roundToInt()} dp" },
+                onChange = { v -> update { it.copy(iconSizeDp = v.roundToInt()) } },
+            )
+        }
+        val packsUsable = appearance.iconStyle == IconStyle.ORIGINAL
+        SettingsItem(
+            title = stringResource(R.string.icon_pack),
+            subtitle = if (packsUsable) appearance.iconPack ?: stringResource(R.string.icon_pack_none) else stringResource(R.string.icon_pack_line_note),
+            icon = Icons.Outlined.Apps,
+            enabled = packsUsable,
+            onClick = { choosingPack = true },
+        )
+
+        SettingsSection(stringResource(R.string.section_wallpaper))
+        val homeImagePath = appearance.homeImagePath
+        SettingsItem(
+            title = stringResource(R.string.home_image),
+            subtitle = stringResource(if (homeImagePath == null) R.string.home_image_none else R.string.home_image_set),
+            icon = Icons.Outlined.Image,
+            onClick = callbacks::pickHomeImage,
+            trailing = homeImagePath?.let { path -> { HomeImageThumbnail(path) } },
+        )
+        if (homeImagePath == null) {
+            SettingsNote(stringResource(R.string.parallax_note))
+            ButtonRow {
+                OutlinedButton(onClick = callbacks::pickHomeImage) { Text(stringResource(R.string.home_image_pick)) }
+            }
+        } else {
+            val hasSensor = remember { TiltSensor.isAvailable(context) }
+            SettingsSwitch(
+                title = stringResource(R.string.parallax),
+                subtitle = stringResource(if (hasSensor) R.string.parallax_sub else R.string.parallax_no_sensor),
+                checked = appearance.parallax && hasSensor,
+                enabled = hasSensor,
+                onChange = { v -> update { it.copy(parallax = v) } },
+            )
+            if (appearance.parallax && hasSensor) {
+                SettingsSlider(
+                    title = stringResource(R.string.parallax_strength),
+                    value = appearance.parallaxStrength,
+                    range = 0.2f..1f,
+                    steps = 7,
+                    valueLabel = { "${(it * 100).roundToInt()} %" },
+                    onChange = { v -> update { it.copy(parallaxStrength = v) } },
+                )
+            }
+            SettingsItem(
+                title = stringResource(R.string.home_image_to_system),
+                subtitle = stringResource(R.string.home_image_to_system_sub),
+                icon = Icons.Outlined.Lock,
+                onClick = callbacks::applyHomeImageToSystem,
+            )
+            SettingsItem(
+                title = stringResource(R.string.home_image_remove),
+                subtitle = stringResource(R.string.home_image_remove_sub),
+                icon = Icons.Outlined.Delete,
+                onClick = vm::removeHomeImage,
+            )
+        }
+        SettingsItem(
+            title = stringResource(R.string.system_wallpaper),
+            subtitle = stringResource(R.string.system_wallpaper_sub),
+            icon = Icons.Outlined.Wallpaper,
+            onClick = callbacks::openWallpaperPicker,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Image(
+                painter = painterResource(R.drawable.rivage_wallpaper),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 64.dp, height = 128.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.rivage_wallpaper), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.rivage_wallpaper_text),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { confirmWallpaper = true }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
+            }
+        }
+        SettingsChoice(
+            title = stringResource(R.string.home_text_color),
+            options = listOf(
+                HomeTextColor.AUTO to stringResource(R.string.home_text_auto),
+                HomeTextColor.LIGHT to stringResource(R.string.home_text_light),
+                HomeTextColor.DARK to stringResource(R.string.home_text_dark),
+            ),
+            selected = appearance.homeTextColor,
+            onSelect = { v -> update { it.copy(homeTextColor = v) } },
+        )
+        SettingsSlider(
+            title = stringResource(R.string.wallpaper_dim),
+            value = appearance.wallpaperDim,
+            range = 0f..0.8f,
+            valueLabel = { "${(it * 100).roundToInt()} %" },
+            onChange = { v -> update { it.copy(wallpaperDim = v) } },
         )
 
         SettingsSection(stringResource(R.string.section_theme))
@@ -634,7 +692,11 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(Color(color))
-                            .border(if (selected) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            .border(
+                                width = if (selected) 3.dp else 1.dp,
+                                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
+                                shape = CircleShape,
+                            )
                             .clickable { update { it.copy(accentColor = color) } },
                     ) {
                         if (selected) Icon(Icons.Outlined.Check, contentDescription = null, tint = Color(0xFF15161A))
@@ -642,26 +704,6 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
                 }
             }
         }
-
-        SettingsSection(stringResource(R.string.section_home_text))
-        SettingsChoice(
-            title = null,
-            options = listOf(
-                HomeTextColor.AUTO to stringResource(R.string.home_text_auto),
-                HomeTextColor.LIGHT to stringResource(R.string.home_text_light),
-                HomeTextColor.DARK to stringResource(R.string.home_text_dark),
-            ),
-            selected = appearance.homeTextColor,
-            onSelect = { v -> update { it.copy(homeTextColor = v) } },
-        )
-        SettingsSlider(
-            title = stringResource(R.string.wallpaper_dim),
-            value = appearance.wallpaperDim,
-            range = 0f..0.8f,
-            valueLabel = { "${(it * 100).roundToInt()} %" },
-            onChange = { v -> update { it.copy(wallpaperDim = v) } },
-        )
-        SettingsItem(stringResource(R.string.home_menu_wallpaper), null, Icons.Outlined.Wallpaper, onClick = callbacks::openWallpaperPicker)
 
         SettingsSection(stringResource(R.string.section_font))
         FontChoice.entries.filter { it != FontChoice.CUSTOM || appearance.customFontPath != null }.forEach { choice ->
@@ -697,25 +739,6 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
             onChange = { v -> update { it.copy(textScale = v) } },
         )
 
-        SettingsSection(stringResource(R.string.section_icons))
-        SettingsSwitch(stringResource(R.string.show_icons), appearance.showIcons, { v -> update { it.copy(showIcons = v) } })
-        if (appearance.showIcons) {
-            SettingsSlider(
-                title = stringResource(R.string.icon_size),
-                value = appearance.iconSizeDp.toFloat(),
-                range = 24f..56f,
-                steps = 7,
-                valueLabel = { "${it.roundToInt()} dp" },
-                onChange = { v -> update { it.copy(iconSizeDp = v.roundToInt()) } },
-            )
-        }
-        SettingsItem(
-            title = stringResource(R.string.icon_pack),
-            subtitle = appearance.iconPack ?: stringResource(R.string.icon_pack_none),
-            icon = Icons.Outlined.Apps,
-            onClick = { choosingPack = true },
-        )
-
         SettingsSection(stringResource(R.string.section_alphabet))
         SettingsChoice(
             title = null,
@@ -733,6 +756,20 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
         )
     }
 
+    if (confirmWallpaper) {
+        AlertDialog(
+            onDismissRequest = { confirmWallpaper = false },
+            title = { Text(stringResource(R.string.rivage_wallpaper_confirm_title)) },
+            text = { Text(stringResource(R.string.rivage_wallpaper_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmWallpaper = false
+                    callbacks.applyRivageWallpaper()
+                }) { Text(stringResource(R.string.rivage_wallpaper_apply)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmWallpaper = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
     if (choosingPack) {
         IconPackDialog(
             vm = vm,
@@ -740,6 +777,29 @@ private fun AppearancePage(vm: SettingsViewModel, appearance: Appearance, callba
             onPick = { pack -> update { it.copy(iconPack = pack) } },
             onDismiss = { choosingPack = false },
         )
+    }
+}
+
+/** Aperçu de l'image de l'accueil (lue en petit, sans bloquer l'affichage). */
+@Composable
+private fun HomeImageThumbnail(path: String) {
+    val thumbnail by produceState<ImageBitmap?>(initialValue = null, path) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap()
+            }.getOrNull()
+        }
+    }
+    val image = thumbnail
+    Box(
+        Modifier
+            .size(width = 36.dp, height = 64.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        if (image != null) {
+            Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        }
     }
 }
 

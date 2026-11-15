@@ -78,7 +78,7 @@ fun AppIcon(app: InstalledApp, label: String, size: Dp, modifier: Modifier = Mod
 @Composable
 private fun LineAppIcon(app: InstalledApp, label: String, size: Dp, modifier: Modifier) {
     val tint = LocalContentColor.current
-    val vector = remember(app.lineIcon) { app.lineIcon?.let(LineIcons::vector) }
+    val vector = remember(app.lineIcon, size) { app.lineIcon?.let { LineIcons.vector(it, size) } }
     if (vector != null) {
         Icon(imageVector = vector, contentDescription = null, tint = tint, modifier = modifier.size(size))
         return

@@ -121,20 +121,36 @@
     <string name="widget_add_failed">Impossible d’ajouter ce widget</string>
     <string name="widget_height">Hauteur : %1$d dp</string>
 
-    <!-- Réglages : thèmes -->
-    <string name="settings_themes">Thème</string>
-    <string name="theme_custom">Personnalisé</string>
-    <string name="themes_note">Un thème change l’apparence de l’accueil et des icônes. Tes favoris, dossiers et widgets ne bougent pas.</string>
-    <string name="theme_apply">Appliquer</string>
-    <string name="theme_active">Thème actuel</string>
-    <string name="theme_custom_note">Tu as personnalisé l’apparence : appliquer un thème remplace tes réglages d’apparence.</string>
-    <string name="section_rivage_wallpaper">Fond d’écran Rivage</string>
-    <string name="rivage_wallpaper_text">Un rivage vu du ciel, en noir et blanc, créé pour aller avec le thème Rivage.</string>
+    <!-- Réglages : fond d’écran Rivage -->
+    <string name="rivage_wallpaper">Fond d’écran Rivage</string>
+    <string name="rivage_wallpaper_text">Un rivage vu du ciel, en noir et blanc, avec l’effet parallaxe. Il va bien avec les icônes au trait.</string>
     <string name="rivage_wallpaper_apply">Utiliser ce fond d’écran</string>
     <string name="rivage_wallpaper_confirm_title">Changer de fond d’écran ?</string>
     <string name="rivage_wallpaper_confirm_text">Le fond d’écran Rivage remplacera ton fond actuel, sur l’accueil et sur l’écran verrouillé.</string>
-    <string name="rivage_wallpaper_done">Fond d’écran appliqué</string>
-    <string name="rivage_wallpaper_failed">Impossible de changer le fond d’écran</string>
+    <string name="wallpaper_applied">Fond d’écran appliqué</string>
+    <string name="wallpaper_failed">Impossible de changer le fond d’écran</string>
+
+    <!-- Réglages : image de l’accueil et effet parallaxe -->
+    <string name="home_image">Image de l’accueil</string>
+    <string name="home_image_none">Aucune : le fond d’écran du téléphone</string>
+    <string name="home_image_set">Ton image, affichée par Épure</string>
+    <string name="home_image_pick">Choisir une image</string>
+    <string name="home_image_failed">Impossible d’ouvrir cette image</string>
+    <string name="parallax_note">Choisis une image (par exemple dans ta galerie) pour l’effet parallaxe : Épure l’affiche lui-même et la fait glisser quand tu inclines le téléphone, comme si elle était derrière l’écran.</string>
+    <string name="parallax">Effet parallaxe</string>
+    <string name="parallax_sub">L’image glisse quand tu inclines le téléphone, comme si elle était derrière l’écran</string>
+    <string name="parallax_no_sensor">Ce téléphone n’a pas de capteur de mouvement : l’image reste fixe.</string>
+    <string name="parallax_strength">Intensité de l’effet</string>
+    <string name="home_image_to_system">Mettre aussi sur l’écran verrouillé</string>
+    <string name="home_image_to_system_sub">L’image devient aussi le fond d’écran du téléphone, avec des couleurs Material You assorties</string>
+    <string name="home_image_remove">Retirer l’image</string>
+    <string name="home_image_remove_sub">Revenir au fond d’écran du téléphone</string>
+    <string name="home_image_system_title">Aussi sur l’écran verrouillé ?</string>
+    <string name="home_image_system_text">Ton image peut aussi devenir le fond d’écran du téléphone : sur l’écran verrouillé, et pour des couleurs Material You assorties. Sur l’accueil, elle a l’effet parallaxe dans tous les cas.</string>
+    <string name="home_image_system_yes">Oui, partout</string>
+    <string name="home_image_system_no">Accueil seulement</string>
+    <string name="system_wallpaper">Fond d’écran du téléphone</string>
+    <string name="system_wallpaper_sub">Ouvrir le sélecteur d’Android (sans effet parallaxe)</string>
 
     <!-- Réglages : accueil -->
     <string name="settings_title">Réglages</string>
@@ -146,7 +162,7 @@
     <string name="settings_favorites">Favoris de l’accueil</string>
     <string name="settings_favorites_sub">Choisir et ordonner les apps de l’accueil</string>
     <string name="settings_appearance">Apparence</string>
-    <string name="settings_appearance_sub">Thème, couleurs, police, icônes</string>
+    <string name="settings_appearance_sub">Mise en page, icônes, couleurs, fond d’écran, police</string>
     <string name="settings_folders">Dossiers et catégories</string>
     <string name="settings_folders_sub">Créer, modifier, ranger automatiquement</string>
     <string name="settings_apps">Apps masquées et renommées</string>
@@ -158,7 +174,7 @@
     <!-- Réglages : widgets -->
     <string name="section_clock">Horloge</string>
     <string name="widget_greeting">Salutation</string>
-    <string name="widget_greeting_sub">« Passe un bon dimanche » en grand, sur l’accueil typographique</string>
+    <string name="widget_greeting_sub">« Passe un bon dimanche » en grand, en haut de l’accueil</string>
     <string name="widget_clock">Afficher l’heure</string>
     <string name="widget_date">Afficher la date</string>
     <string name="section_weather">Météo</string>
@@ -201,13 +217,16 @@
     <string name="favorites_add">Choisir les apps de l’accueil</string>
 
     <!-- Réglages : apparence -->
-    <string name="section_layout">Mise en page</string>
-    <string name="home_style">Accueil</string>
+    <string name="appearance_note">Chaque réglage se change séparément. Par défaut : accueil en liste, icônes au trait, police ronde, couleurs de ton fond d’écran.</string>
+    <string name="section_layout">Mise en page de l’accueil</string>
     <string name="home_style_typo">Typographique</string>
     <string name="home_style_list">Liste</string>
-    <string name="icon_style">Icônes</string>
+    <string name="home_style_list_sub">L’heure au-dessus de tes apps, au centre de l’écran.</string>
+    <string name="home_style_typo_sub">Grande salutation et petites capitales en haut, apps en liste compacte en bas.</string>
+    <string name="icon_style">Style des icônes</string>
     <string name="icon_style_line">Au trait</string>
     <string name="icon_style_original">D’origine</string>
+    <string name="icon_pack_line_note">Les packs d’icônes s’utilisent avec le style « D’origine ».</string>
     <string name="section_theme">Couleurs</string>
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
@@ -215,7 +234,8 @@
     <string name="dynamic_color">Couleurs Material You</string>
     <string name="dynamic_color_sub">Couleurs tirées de ton fond d’écran</string>
     <string name="accent_color">Couleur d’accent</string>
-    <string name="section_home_text">Texte sur le fond d’écran</string>
+    <string name="section_wallpaper">Fond d’écran</string>
+    <string name="home_text_color">Couleur du texte sur le fond d’écran</string>
     <string name="home_text_auto">Auto</string>
     <string name="home_text_light">Clair</string>
     <string name="home_text_dark">Sombre</string>

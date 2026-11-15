@@ -35,8 +35,31 @@ class ConfigJsonTest {
         val v1 = ConfigJson.encode(LauncherConfig(schemaVersion = 1).updateAppearance { it.copy(font = FontChoice.SYSTEM) })
         val read = ConfigJson.decode(v1)
         assertEquals(CURRENT_SCHEMA_VERSION, read.schemaVersion)
-        assertEquals(FontChoice.MONTSERRAT, read.appearance.font)
+        assertEquals(FontChoice.NUNITO, read.appearance.font)
         assertEquals(IconStyle.LINE, read.appearance.iconStyle)
+        assertEquals(HomeStyle.LIST, read.appearance.homeStyle)
+    }
+
+    @Test
+    fun `une configuration de la version 0_2 sans style d icones passe aux icones au trait`() {
+        // JSON écrit par la 0.2 : ni iconStyle ni homeStyle.
+        val v2 = """{"schemaVersion":2,"appearance":{"font":"OUTFIT","accentColor":4294085544,"iconSizeDp":44}}"""
+        val read = ConfigJson.decode(v2)
+        assertEquals(CURRENT_SCHEMA_VERSION, read.schemaVersion)
+        assertEquals(FontChoice.OUTFIT, read.appearance.font)
+        assertEquals(44, read.appearance.iconSizeDp)
+        assertEquals(0xFFF28BA8, read.appearance.accentColor)
+        assertEquals(IconStyle.LINE, read.appearance.iconStyle)
+        assertEquals(HomeStyle.LIST, read.appearance.homeStyle)
+    }
+
+    @Test
+    fun `la configuration Rivage de la 0_3 revient a Epure a la lecture`() {
+        val v3 = """{"schemaVersion":3,"home":[{"type":"app","key":"k"}],""" +
+            """"appearance":{"themeMode":"DARK","dynamicColor":false,"font":"MONTSERRAT","iconStyle":"LINE","homeStyle":"TYPOGRAPHIC","iconSizeDp":28}}"""
+        val read = ConfigJson.decode(v3)
+        assertEquals(listOf<HomeItem>(HomeItem.App("k")), read.home)
+        assertEquals(Appearance(), read.appearance)
     }
 
     @Test
