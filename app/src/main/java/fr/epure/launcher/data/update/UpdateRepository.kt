@@ -274,6 +274,12 @@ class UpdateRepository(context: Context, private val scope: CoroutineScope) {
                 // Sans confirmation quand Android le permet (Épure a déjà installé cette app).
                 setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Épure installe ses propres apps depuis leur dépôt officiel, comme une boutique :
+                // ce n'est pas un fichier téléchargé au hasard (Android est alors moins restrictif
+                // pour l'accès aux notifications du module).
+                setPackageSource(PackageInstaller.PACKAGE_SOURCE_STORE)
+            }
         }
         val sessionId = installer.createSession(params)
         installer.openSession(sessionId).use { session ->

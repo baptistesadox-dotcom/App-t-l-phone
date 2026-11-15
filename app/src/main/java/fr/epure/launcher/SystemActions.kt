@@ -67,6 +67,13 @@ object SystemActions {
         start(context, intent, context.getString(R.string.error_no_app))
     }
 
+    /** Réglages de Play Protect (ou, à défaut, le Play Store). */
+    fun openPlayProtect(context: Context) {
+        if (start(context, Intent("com.google.android.gms.settings.VERIFY_APPS_SETTINGS"))) return
+        val store = context.packageManager.getLaunchIntentForPackage("com.android.vending")
+        if (store != null) start(context, store, context.getString(R.string.error_no_app))
+    }
+
     /** Ouvre un réglage d'Android trouvé par la recherche (ou un réglage plus général). */
     fun openShortcut(context: Context, shortcut: SystemShortcut): Boolean {
         val action = shortcut.action ?: return false

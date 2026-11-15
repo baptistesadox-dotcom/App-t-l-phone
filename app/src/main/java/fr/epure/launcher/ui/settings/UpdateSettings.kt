@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.epure.launcher.R
+import fr.epure.launcher.SystemActions
 import fr.epure.launcher.data.update.AvailableUpdate
 import fr.epure.launcher.data.update.UpdateError
 import fr.epure.launcher.data.update.UpdateRepository
@@ -194,13 +195,23 @@ fun ModuleInstallButton(updates: UpdateRepository) {
     val state by updates.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(Unit) { if (state.manifest == null) updates.check() }
-    if (state.moduleOffer == null) return
+    if (state.moduleOffer == null) {
+        when {
+            state.checking -> SettingsNote(stringResource(R.string.notif_module_checking))
+            state.error != null -> {
+                state.error?.let { UpdateErrorNote(it, state.errorMessage) }
+                ButtonRow { OutlinedButton(onClick = updates::check) { Text(stringResource(R.string.notif_module_retry)) } }
+            }
+        }
+        return
+    }
     val busy = state.progress != null
     ButtonRow {
         Button(onClick = { startInstall(context, updates, UpdateTarget.MODULE) }, enabled = !busy) {
             Text(stringResource(R.string.notif_module_install))
         }
     }
+    if (!updates.canInstall()) SettingsNote(stringResource(R.string.update_permission_note))
     state.progress?.takeIf { it.target == UpdateTarget.MODULE }?.let { progress ->
         val fraction = progress.fraction
         Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
@@ -211,7 +222,16 @@ fun ModuleInstallButton(updates: UpdateRepository) {
             }
         }
     }
-    state.error?.let { UpdateErrorNote(it, state.errorMessage) }
+    state.error?.let { error ->
+        UpdateErrorNote(error, state.errorMessage)
+        if (error == UpdateError.INSTALL_FAILED) {
+            // Bloqué quand même : dernière solution, mettre Play Protect en pause le temps de l'installation.
+            SettingsNote(stringResource(R.string.notif_module_play_protect_fallback))
+            ButtonRow {
+                OutlinedButton(onClick = { SystemActions.openPlayProtect(context) }) { Text(stringResource(R.string.open_play_protect)) }
+            }
+        }
+    }
 }
 
 /**

@@ -95,9 +95,13 @@ appareil »). Le launcher ne lit donc rien lui-même et ses mises à jour s'inst
 normalement ; seul le module est concerné. Il peut aussi être installé ou mis à jour depuis
 Réglages › Accueil et widgets (Notifications) ou Réglages › À propos.
 
-1. Play Store › photo de profil › **Play Protect** › ⚙ › désactiver *Analyser les applis
-   avec Play Protect*.
-2. Installer `Epure-Notifications.apk`, puis **réactiver aussitôt** l'analyse Play Protect.
+1. **Depuis Épure** (recommandé) : Réglages › Accueil et widgets › Notifications ›
+   *Télécharger et installer le module*, puis confirmer l'installation. Ouvrir le fichier APK
+   depuis un navigateur ou une messagerie déclenche le blocage de Play Protect ; installé par
+   Épure, le module vient de son dépôt officiel.
+2. Si Play Protect bloque quand même : Play Store › photo de profil › **Play Protect** › ⚙ ›
+   désactiver *Analyser les applis avec Play Protect*, relancer l'installation, puis
+   **réactiver aussitôt** l'analyse.
 3. Ouvrir le module (ou Réglages d'Épure › Accueil et widgets › Notifications) ›
    *Autoriser l'accès aux notifications*. Si Android affiche « Paramètre restreint » :
    infos de l'app du module › ⋮ › *Autoriser les paramètres restreints*, puis recommencer.
